@@ -10,10 +10,7 @@ import com.segment.analytics.substrata.kotlin.JSValue
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
 import com.segment.analytics.substrata.kotlin.j2v8.toJSObject
 import com.segment.analytics.substrata.kotlin.wrapAsJSValue
-
-object ContextProvider {
-    lateinit var context: Context
-}
+import java.lang.Exception
 
 class JSAnalytics private constructor() {
 
@@ -38,13 +35,19 @@ class JSAnalytics private constructor() {
             return null
         }
 
+    val context: Any?
+        get() = analytics.configuration.application
+
     constructor(analytics: Analytics, engine: J2V8Engine): this() {
         this.analytics = analytics
         this.engine = engine
     }
 
-    constructor(writeKey: String): this() {
-        this.analytics = Analytics(writeKey, ContextProvider.context)
+    constructor(writeKey: String, context: Any?): this() {
+        require (context is Context) {
+            "Incompatible Android Context!"
+        }
+        this.analytics = Analytics(writeKey, context)
     }
 
     fun track(event: String, properties: JSValue.JSObject) {
