@@ -8,8 +8,8 @@ import com.segment.analytics.kotlin.core.platform.EventPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.kotlin.core.utilities.getInt
 import com.segment.analytics.kotlin.core.utilities.getString
+import com.segment.analytics.substrata.kotlin.JSEngineError
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
-import com.segment.analytics.substrata.kotlin.wrapAsJSValue
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
@@ -17,9 +17,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.InputStream
 
 class EdgeFunctions(
-    val fallbackFileURL: String? = null
+    val fallbackFile: InputStream? = null
 ): EventPlugin {
 
     companion object {
@@ -71,7 +73,7 @@ class EdgeFunctions(
 
     fun loadEdgeFn(file: File) {
         engine.errorHandler = {
-            println(it)
+            it.printStackTrace()
         }
 
         engine.expose(JSAnalytics::class, "Analytics")
@@ -82,14 +84,11 @@ class EdgeFunctions(
         engine.execute(EmbeddedJS.ENUM_SETUP_SCRIPT)
         engine.execute(EmbeddedJS.EDGE_FN_BASE_SETUP_SCRIPT)
 
-        if (!file.exists() && fallbackFileURL != null) {
-            val backup = File(fallbackFileURL)
-            if (backup.exists()) {
-                backup.copyTo(file)
-            }
+        if (!file.exists() && fallbackFile != null) {
+            fallbackFile.copyTo(FileOutputStream(file))
         }
 
-        engine.loadBundle(FileInputStream(file)) { error ->
+        engine.loadBundle(file.inputStream()) { error ->
             error?.let {
                 println(error.message)
             }

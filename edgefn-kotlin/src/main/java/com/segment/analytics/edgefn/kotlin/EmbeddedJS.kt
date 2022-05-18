@@ -5,10 +5,10 @@ import com.segment.analytics.kotlin.core.platform.Plugin
 object EmbeddedJS {
     val ENUM_SETUP_SCRIPT = """
     const EdgeFnType = {
-        before: ${Plugin.Type.Before},
-        enrichment: ${Plugin.Type.Enrichment},
-        after: ${Plugin.Type.After},
-        utility: ${Plugin.Type.Utility}
+        before: ${Plugin.Type.Before.toInt()},
+        enrichment: ${Plugin.Type.Enrichment.toInt()},
+        after: ${Plugin.Type.After.toInt()},
+        utility: ${Plugin.Type.Utility.toInt()}
     };
     """
 

@@ -1,10 +1,13 @@
 package com.segment.analytics.edgefn.kotlin
 
 import android.content.Context
+import com.eclipsesource.v8.V8Array
+import com.eclipsesource.v8.V8Object
 import com.segment.analytics.kotlin.android.Analytics
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.platform.DestinationPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
+import com.segment.analytics.kotlin.core.utilities.getInt
 import com.segment.analytics.kotlin.core.utilities.getString
 import com.segment.analytics.substrata.kotlin.JSValue
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
@@ -50,6 +53,10 @@ class JSAnalytics private constructor() {
         this.analytics = Analytics(writeKey, context)
     }
 
+    constructor(params: V8Array) : this() {
+
+    }
+
     fun track(event: String, properties: JSValue.JSObject) {
         properties.mapRepresentation?.let {
             analytics.track(event, it)
@@ -86,7 +93,7 @@ class JSAnalytics private constructor() {
         analytics.reset()
     }
 
-    fun add(plugin: Any): Boolean {
+    fun add(plugin: V8Object): Boolean {
         var result = false
         engine ?: return result
 
@@ -95,8 +102,8 @@ class JSAnalytics private constructor() {
             return result
         }
 
-        val type: Plugin.Type? = jsPlugin.mapRepresentation!!.getString("type")?.let {
-            enumValueOf<Plugin.Type>(it)
+        val type: Plugin.Type? = jsPlugin.mapRepresentation!!.getInt("type")?.let {
+            pluginTypeFromInt(it)
         }
         val destination: String? = jsPlugin.mapRepresentation!!.getString("destination")
         type ?: return result
