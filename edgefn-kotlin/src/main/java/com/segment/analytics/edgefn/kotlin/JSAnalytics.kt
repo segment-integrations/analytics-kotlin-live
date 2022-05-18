@@ -11,6 +11,7 @@ import com.segment.analytics.kotlin.core.utilities.getInt
 import com.segment.analytics.kotlin.core.utilities.getString
 import com.segment.analytics.substrata.kotlin.JSValue
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
+import com.segment.analytics.substrata.kotlin.j2v8.fromV8Object
 import com.segment.analytics.substrata.kotlin.j2v8.toJSObject
 import com.segment.analytics.substrata.kotlin.wrapAsJSValue
 import java.lang.Exception
@@ -46,39 +47,43 @@ class JSAnalytics private constructor() {
         this.engine = engine
     }
 
-    constructor(writeKey: String, context: Any?): this() {
-        require (context is Context) {
+    constructor(writeKey: String, baseAnalytics: JSAnalytics): this() {
+        require (baseAnalytics.context is Context) {
             "Incompatible Android Context!"
         }
-        this.analytics = Analytics(writeKey, context)
+        this.analytics = Analytics(writeKey, baseAnalytics.context as Context)
     }
 
-    constructor(params: V8Array) : this() {
-
+    fun track(event: String) {
+        analytics.track(event)
     }
 
-    fun track(event: String, properties: JSValue.JSObject) {
-        properties.mapRepresentation?.let {
-            analytics.track(event, it)
-        }
+    fun track(event: String, properties: V8Object) {
+        analytics.track(event, fromV8Object(properties)!!)
     }
 
-    fun identify(userId: String, traits: JSValue.JSObject) {
-        traits.mapRepresentation?.let {
-            analytics.identify(userId, it)
-        }
+    fun identify(userId: String) {
+        analytics.identify(userId)
     }
 
-    fun screen(title: String, category: String, properties: JSValue.JSObject) {
-        properties.mapRepresentation?.let {
-            analytics.screen(title, it, category)
-        }
+    fun identify(userId: String, traits: V8Object) {
+        analytics.identify(userId, fromV8Object(traits)!!)
     }
 
-    fun group(groupId: String, traits: JSValue.JSObject) {
-        traits.mapRepresentation?.let {
-            analytics.group(groupId, it)
-        }
+    fun screen(title: String, category: String) {
+        analytics.screen(title, category)
+    }
+
+    fun screen(title: String, category: String, properties: V8Object) {
+        analytics.screen(title, fromV8Object(properties)!!, category)
+    }
+
+    fun group(groupId: String) {
+        analytics.group(groupId)
+    }
+
+    fun group(groupId: String, traits: V8Object) {
+        analytics.group(groupId, fromV8Object(traits)!!)
     }
 
     fun alias(newId: String) {

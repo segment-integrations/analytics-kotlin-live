@@ -26,20 +26,21 @@ class TestSuper extends EdgeFn {
 };
 
 // EdgeFn example end -------------------------------------------
-//
-//const userRegisteredEventProps = {
-//    plan: "Pro Annual",
-//    accountType : "Facebook"
-//}
-//
-//const checkoutEventProps = {
-//    amount: "$1337.00"
-//}
-//
-//let a = new Analytics("lAtKCqFrmtnhIVV7LDPTrgoCbL0ujlBe");
-//_ = a.track("userRegisteredEvent", userRegisteredEventProps);
-//_ = a.track("checkoutEvent", checkoutEventProps);
-//a.flush();
+
+const userRegisteredEventProps = {
+    plan: "Pro Annual",
+    accountType : "Facebook"
+}
+
+const checkoutEventProps = {
+    amount: "$1337.00"
+}
+
+let a = new Analytics("HGSe7bCEnT78Pfc6FEZcylGrl5fqkfcA", analytics);
+_ = a.track("testtest")
+_ = a.track("userRegisteredEvent", userRegisteredEventProps);
+_ = a.track("checkoutEvent", checkoutEventProps);
+a.flush();
 
 let fn = new TestSuper(EdgeFnType.enrichment, null);
 analytics.add(fn);
