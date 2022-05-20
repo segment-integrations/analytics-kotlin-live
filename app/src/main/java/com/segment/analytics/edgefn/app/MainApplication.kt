@@ -25,5 +25,6 @@ class MainApplication : Application() {
         }
         val backup = resources.openRawResource(R.raw.default_edgefn)
         analytics.add(EdgeFunctions(backup))
+        analytics.track("howdy doody")
     }
 }

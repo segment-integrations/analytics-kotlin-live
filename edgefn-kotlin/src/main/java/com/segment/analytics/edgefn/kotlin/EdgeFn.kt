@@ -58,7 +58,6 @@ internal class EdgeFn(
     }
 
     override fun execute(event: BaseEvent): BaseEvent? {
-        val list = listOf(event.context, event.integrations)
         val modified = engine.syncRunEngine {
             val arr = V8Array(it)
             arr.push(event.toV8Object(it))
