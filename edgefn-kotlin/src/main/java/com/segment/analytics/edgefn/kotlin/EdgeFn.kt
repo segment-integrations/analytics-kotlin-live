@@ -61,7 +61,7 @@ internal class EdgeFn(
         val modified = engine.syncRunEngine {
             val arr = V8Array(it)
             arr.push(event.toV8Object(it))
-            return@syncRunEngine (jsPlugin as JSValue.JSObject).content.executeObjectFunction("execute", arr)
+            return@syncRunEngine (jsPlugin as JSValue.JSObject).content.executeObjectFunction("execute", arr) // TODO
         }
 
         if (modified !is JSValue.JSObject) {
@@ -82,7 +82,7 @@ internal class EdgeFn(
     private fun Settings.toMap() = Json.encodeToString(this)
         // (Json.encodeToJsonElement(this) as JsonObject).toMap()
 
-    private fun <T: BaseEvent> convert(event: JSValue.JSObject): BaseEvent? {
+    private fun <T: BaseEvent> convert(event: JSValue.JSObject): BaseEvent? { // TODO
         val ret = engine.syncRun {
             toSegmentEvent<T>(event)!!
         }
