@@ -5,6 +5,7 @@ import com.eclipsesource.v8.V8Function
 import com.eclipsesource.v8.V8Object
 import com.segment.analytics.substrata.kotlin.j2v8.fromV8Array
 import com.segment.analytics.substrata.kotlin.j2v8.fromV8Object
+import com.segment.analytics.substrata.kotlin.j2v8.memScope
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
@@ -26,44 +27,43 @@ interface JSValue {
     @JvmInline
     value class JSDouble(val content: Double) : JSValue
 
-    class JSObject(val content: V8Object) : JSValue {
-        val mapRepresentation: JsonObject? by lazy { fromV8Object(content) }
+    class JSObject : JSValue {
+        val content: JsonObject?
+
+        constructor(obj: V8Object) {
+            content = fromV8Object(obj)
+        }
+
+        constructor(obj: JsonObject) {
+            content = obj
+        }
     }
 
-    class JSArray(val content: V8Array) : JSValue {
-        val listRepresentation: JsonArray? by lazy { fromV8Array(content) }
+    class JSArray : JSValue {
+        val content: JsonArray?
+
+        constructor(array: V8Array) {
+            content = fromV8Array(array)
+        }
+
+        constructor(array: JsonArray) {
+            content = array
+        }
     }
 
     class JSFunction(val fn: V8Function) : JSValue
+
+    class JSObjectReference(val ref: V8Object) : JSValue {
+        val content: JsonObject? = fromV8Object(ref)
+    }
 
     object JSUndefined : JSValue // might not need this, might just be a compile time error
     object JSNull : JSValue
 }
 
-fun jsValueToString(value: Any?): String {
-    return when (value) {
-        is Boolean -> value.toString()
-        is Int -> value.toString()
-        is Double -> value.toString()
-        is String -> value.toString()
-        is V8Array -> buildString {
-            for (i in 0 until value.length() - 1) {
-                append(jsValueToString(value.get(i)))
-                append(", ")
-            }
-        }
-        is V8Object -> buildString {
-            for (key in value.keys) {
-                append(jsValueToString(value.get(key)))
-                append(", ")
-            }
-        }
-        null -> "null"
-        else -> "undefined"
-    }
-}
-
-fun wrapAsJSValue(obj: Any?): JSValue {
+// Use this API fro wrapping values coming from J2V8
+// Must be run on the J2V8 thread
+internal fun wrapAsJSValue(obj: Any?): JSValue {
     return when (obj) {
         null -> return JSValue.JSNull
         is Boolean -> JSValue.JSBool(obj)

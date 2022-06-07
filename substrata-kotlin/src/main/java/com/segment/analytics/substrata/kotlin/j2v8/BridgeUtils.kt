@@ -27,6 +27,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import java.io.Closeable
 
 /**
  * Lambda scope for allocating and safely cleaning V8Object
@@ -247,7 +248,7 @@ private fun getValue(value: Any?, type: Int): JsonElement? {
 }
 
 fun fromV8Object(obj: V8Object?): JsonObject? {
-    if (obj == null) {
+    if (obj == null || obj.isUndefined) {
         return null
     }
     return buildJsonObject {
@@ -274,7 +275,7 @@ fun fromV8Object(obj: V8Object?): JsonObject? {
 }
 
 fun fromV8Array(array: V8Array?): JsonArray? {
-    if (array == null) {
+    if (array == null || array.isUndefined) {
         return null
     }
     return buildJsonArray {

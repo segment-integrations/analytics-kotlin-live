@@ -1,26 +1,22 @@
 package com.segment.analytics.edgefn.kotlin
 
 import android.content.Context
-import com.eclipsesource.v8.V8Array
 import com.eclipsesource.v8.V8Object
 import com.segment.analytics.kotlin.android.Analytics
 import com.segment.analytics.kotlin.core.Analytics
-import com.segment.analytics.kotlin.core.platform.DestinationPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.kotlin.core.utilities.getInt
 import com.segment.analytics.kotlin.core.utilities.getString
 import com.segment.analytics.substrata.kotlin.JSValue
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
 import com.segment.analytics.substrata.kotlin.j2v8.fromV8Object
-import com.segment.analytics.substrata.kotlin.j2v8.toJSObject
-import com.segment.analytics.substrata.kotlin.wrapAsJSValue
-import java.lang.Exception
+import com.segment.analytics.substrata.kotlin.j2v8.toV8Object
 
-class JSAnalytics private constructor() {
+class JSAnalytics {
 
-    internal lateinit var analytics: Analytics
-
-    internal var engine: J2V8Engine? = null
+    internal var analytics: Analytics
+    internal var engine: J2V8Engine
+    internal val mainAnalytics: Boolean
 
     val anonymousId: String
         get() = analytics.anonymousId()
@@ -28,30 +24,33 @@ class JSAnalytics private constructor() {
     val userId: String?
         get() = analytics.userId()
 
-    val traits: JSValue.JSObject?
+    val traits: V8Object?
         get() {
-            engine?.run {
-                analytics.traits()?.toMap()?.let {
-                    return@run this.toJSObject(it)
-                }
+            var res: V8Object? = null
+            analytics.traits()?.let {
+                res = engine.underlying.toV8Object(it)
             }
-
-            return null
+            return res
         }
 
-    val context: Any?
+    private val context: Any?
         get() = analytics.configuration.application
 
-    constructor(analytics: Analytics, engine: J2V8Engine): this() {
+    // This is the constructor used by the native to create the injected instance
+    constructor(analytics: Analytics, engine: J2V8Engine) {
         this.analytics = analytics
         this.engine = engine
+        mainAnalytics = true
     }
 
-    constructor(writeKey: String, baseAnalytics: JSAnalytics): this() {
-        require (baseAnalytics.context is Context) {
+    // This is the constructor used when JS creates a new one
+    constructor(writeKey: String, baseAnalytics: JSAnalytics) {
+        require(baseAnalytics.context is Context) {
             "Incompatible Android Context!"
         }
         this.analytics = Analytics(writeKey, baseAnalytics.context as Context)
+        this.engine = baseAnalytics.engine
+        mainAnalytics = false
     }
 
     fun track(event: String) {
@@ -99,34 +98,26 @@ class JSAnalytics private constructor() {
     }
 
     fun add(plugin: V8Object): Boolean {
-        var result = false
-        engine ?: return result
+        if (!mainAnalytics) return false // Only allow adding plugins to injected analytics
 
-        val jsPlugin = wrapAsJSValue(plugin)
-        if (jsPlugin !is JSValue.JSObject || jsPlugin.mapRepresentation == null) {
-            return result
-        }
+        val jsPlugin = JSValue.JSObjectReference(plugin)
+        val jsPluginData = jsPlugin.content ?: return false
 
-        val type: Plugin.Type? = jsPlugin.mapRepresentation!!.getInt("type")?.let {
+        val type: Plugin.Type = jsPluginData.getInt("type")?.let {
             pluginTypeFromInt(it)
-        }
-        val destination: String? = jsPlugin.mapRepresentation!!.getString("destination")
-        type ?: return result
+        } ?: return false
+        val destination: String? = jsPluginData.getString("destination")
 
-        val edgeFn = EdgeFn(jsPlugin, type, engine!!)
-        destination?.let { dest ->
-            // TODO: replace with analytics.find
-            analytics.findAll(DestinationPlugin::class).find {
-                it.key == dest
-            }?.let {
+        var result = false
+        val edgeFn = EdgeFn(jsPlugin, type, engine)
+        if (destination != null) {
+            // Plugin belongs to destination
+            analytics.find(destination)?.let {
                 it.add(edgeFn)
                 result = true
             }
-//            analytics!!.find(dest)?.let {
-//                it.add(edgeFn)
-//                result = true
-//            }
-        } ?: let {
+        } else {
+            // Add it to the main timeline
             analytics.add(edgeFn)
             result = true
         }

@@ -40,6 +40,7 @@ let a = new Analytics("HGSe7bCEnT78Pfc6FEZcylGrl5fqkfcA", analytics);
 _ = a.track("testtest")
 _ = a.track("userRegisteredEvent", userRegisteredEventProps);
 _ = a.track("checkoutEvent", checkoutEventProps);
+a.identify("newUser", {behaviour:"Bad"});
 a.flush();
 
 let fn = new TestSuper(EdgeFnType.enrichment, null);

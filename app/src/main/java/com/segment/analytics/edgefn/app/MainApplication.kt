@@ -4,6 +4,7 @@ import android.app.Application
 import com.segment.analytics.edgefn.kotlin.EdgeFunctions
 import com.segment.analytics.kotlin.android.Analytics
 import com.segment.analytics.kotlin.core.Analytics
+import com.segment.analytics.kotlin.core.platform.plugins.logger.logFlush
 
 class MainApplication : Application() {
     companion object {
@@ -14,7 +15,7 @@ class MainApplication : Application() {
         super.onCreate()
 
         analytics = Analytics(
-            "tteOFND0bb5ugJfALOJWpF0wu1tcxYgr",
+            "HO63Z36e0Ufa8AAgbjDomDuKxFuUICqI",
             applicationContext
         ) {
             this.collectDeviceId = true
@@ -24,7 +25,7 @@ class MainApplication : Application() {
             this.flushInterval = 0
         }
         val backup = resources.openRawResource(R.raw.default_edgefn)
-        analytics.add(EdgeFunctions(backup))
+        analytics.add(EdgeFunctions(backup, true))
         analytics.track("howdy doody")
     }
 }

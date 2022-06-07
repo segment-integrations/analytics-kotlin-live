@@ -1,40 +1,45 @@
 package com.segment.analytics.edgefn.kotlin
 
-import com.eclipsesource.v8.V8Array
-import com.eclipsesource.v8.V8Object
-import com.segment.analytics.kotlin.core.*
+import com.segment.analytics.kotlin.core.AliasEvent
+import com.segment.analytics.kotlin.core.Analytics
+import com.segment.analytics.kotlin.core.BaseEvent
+import com.segment.analytics.kotlin.core.GroupEvent
+import com.segment.analytics.kotlin.core.IdentifyEvent
+import com.segment.analytics.kotlin.core.ScreenEvent
+import com.segment.analytics.kotlin.core.Settings
+import com.segment.analytics.kotlin.core.TrackEvent
 import com.segment.analytics.kotlin.core.platform.EventPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.substrata.kotlin.JSValue
-import com.segment.analytics.substrata.kotlin.j2v8.*
-import com.segment.analytics.substrata.kotlin.jsValueToString
-import com.segment.analytics.substrata.kotlin.wrapAsJSValue
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.*
-import kotlinx.serialization.json.Json.Default.encodeToJsonElement
+import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
+import com.segment.analytics.substrata.kotlin.j2v8.toBaseEvent
+import com.segment.analytics.substrata.kotlin.j2v8.toJSObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 
 /**
-EdgeFn is the wrapper class that will end up calling into
-the JS for a given EdgeFn.
+ * EdgeFn is the native Analytics Plugin representation of the jsPlugin specified
+ * in the EdgeFunctions bundle.
+ * EdgeFn is responsible for ensuring all data being passed is understandable by JS
  */
 internal class EdgeFn(
-    private val jsPlugin: JSValue,
+    private val jsPlugin: JSValue.JSObjectReference,
     override val type: Plugin.Type,
-    private val engine: J2V8Engine) : EventPlugin {
+    private val engine: J2V8Engine
+) : EventPlugin {
 
     override lateinit var analytics: Analytics
 
     override fun update(settings: Settings, type: Plugin.UpdateType) {
         super.update(settings, type)
 
-        if (jsPlugin is JSValue.JSObject) {
-            val list = listOf(Json.encodeToJsonElement(settings), JsonPrimitive(type.toString()))
-            engine.syncRunEngine {
-                jsPlugin.content.executeVoidFunction("update", engine.toJSArray(list).content)
-            }
-
-        }
+        val settingsJson = Json.encodeToJsonElement(settings).jsonObject
+        engine.call(
+            jsPlugin,
+            "update",
+            listOf(JSValue.JSObject(settingsJson), JSValue.JSString(type.toString()))
+        )
     }
 
     override fun alias(payload: AliasEvent): BaseEvent? {
@@ -58,35 +63,12 @@ internal class EdgeFn(
     }
 
     override fun execute(event: BaseEvent): BaseEvent? {
-        val modified = engine.syncRunEngine {
-            val arr = V8Array(it)
-            arr.push(event.toV8Object(it))
-            return@syncRunEngine (jsPlugin as JSValue.JSObject).content.executeObjectFunction("execute", arr) // TODO
+        val modified = engine.call(jsPlugin, "execute", listOf(event.toJSObject()))
+
+        return if (modified !is JSValue.JSObject) {
+            null
+        } else {
+            modified.toBaseEvent()
         }
-
-        if (modified !is JSValue.JSObject) {
-            return null
-        }
-
-        return when(event) {
-            is IdentifyEvent -> convert<IdentifyEvent>(modified)
-            is TrackEvent -> convert<TrackEvent>(modified)
-            is ScreenEvent -> convert<ScreenEvent>(modified)
-            is AliasEvent -> convert<AliasEvent>(modified)
-            is GroupEvent -> convert<GroupEvent>(modified)
-            else -> event
-        }
-    }
-
-    // to conform with swift's implementation, convert to string instead of map
-    private fun Settings.toMap() = Json.encodeToString(this)
-        // (Json.encodeToJsonElement(this) as JsonObject).toMap()
-
-    private fun <T: BaseEvent> convert(event: JSValue.JSObject): BaseEvent? { // TODO
-        val ret = engine.syncRun {
-            toSegmentEvent<T>(event)!!
-        }
-
-        return ret
     }
 }

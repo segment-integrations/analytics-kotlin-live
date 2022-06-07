@@ -2,13 +2,14 @@ package com.segment.analytics.edgefn.kotlin
 
 import com.segment.analytics.kotlin.core.platform.Plugin
 
+// TODO do we want utility??
 object EmbeddedJS {
     val ENUM_SETUP_SCRIPT = """
     const EdgeFnType = {
         before: ${Plugin.Type.Before.toInt()},
         enrichment: ${Plugin.Type.Enrichment.toInt()},
         after: ${Plugin.Type.After.toInt()},
-        utility: ${Plugin.Type.Utility.toInt()}
+//        utility: ${Plugin.Type.Utility.toInt()}
     };
     """
 
@@ -46,4 +47,20 @@ object EmbeddedJS {
         flush() { }
     }
     """
+}
+
+fun Plugin.Type.toInt() = when(this) {
+    Plugin.Type.Before -> 0
+    Plugin.Type.Enrichment -> 1
+    Plugin.Type.After -> 2
+//    Plugin.Type.Utility -> 3
+    else -> -1
+}
+
+fun pluginTypeFromInt(value: Int) = when (value) {
+    0 -> Plugin.Type.Before
+    1 -> Plugin.Type.Enrichment
+    2 -> Plugin.Type.After
+//    3 -> Plugin.Type.Utility
+    else -> null
 }

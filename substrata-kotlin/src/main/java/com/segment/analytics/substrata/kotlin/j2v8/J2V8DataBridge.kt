@@ -36,8 +36,18 @@ class J2V8DataBridge(
                 is JSValue.JSBool -> dataBridge.add(key, value.content)
                 is JSValue.JSInt -> dataBridge.add(key, value.content)
                 is JSValue.JSDouble -> dataBridge.add(key, value.content)
-                is JSValue.JSArray -> dataBridge.add(key, value.content)
-                is JSValue.JSObject -> dataBridge.add(key, value.content)
+                is JSValue.JSArray -> {
+                    val jsRep = value.content
+                    jsRep?.let {
+                        dataBridge.add(key, engine.underlying.toV8Array(it))
+                    }
+                }
+                is JSValue.JSObject -> {
+                    val jsRep = value.content
+                    jsRep?.let {
+                        dataBridge.add(key, engine.underlying.toV8Object(it))
+                    }
+                }
                 is JSValue.JSNull -> dataBridge.addNull(key)
                 is JSValue.JSUndefined -> dataBridge.addUndefined(key)
                 else -> Unit // NO-OP
