@@ -8,10 +8,11 @@ import com.segment.analytics.kotlin.core.platform.EventPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.kotlin.core.platform.plugins.logger.LogFilterKind
 import com.segment.analytics.kotlin.core.platform.plugins.logger.log
-import com.segment.analytics.kotlin.core.utilities.getInt
+import com.segment.analytics.kotlin.core.utilities.LenientJson
 import com.segment.analytics.kotlin.core.utilities.getString
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -20,30 +21,34 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
+@Serializable
+data class EdgeFunctionsSettings(
+    val version: Int = -1,
+    val downloadUrl: String = ""
+)
+
 class EdgeFunctions(
     private val fallbackFile: InputStream? = null,
     private val forceFallbackFile: Boolean = false
 ) : EventPlugin {
-
-    companion object {
-        const val USER_DEFAULTS_KEY = "EdgeFunction"
-        const val VERSION_KEY = "version"
-        const val DOWNLOAD_URL_KEY = "downloadURL"
-
-        const val EDGE_FUNCTION_FILE_NAME = "edgeFunction.js"
-    }
-
-    override lateinit var analytics: Analytics
-
     override val type: Plugin.Type = Plugin.Type.Utility
 
-    internal val engine = J2V8Engine()
-
-    internal var loaded = false
+    companion object {
+        const val EDGE_FUNCTION_FILE_NAME = "edgeFunctions.js"
+        const val SHARED_PREFS_KEY = "EdgeFunctions"
+    }
+    override lateinit var analytics: Analytics
 
     private lateinit var sharedPreferences: SharedPreferences
 
+    internal val engine = J2V8Engine()
+    internal var loaded = false
     private lateinit var edgeFnFile: File
+
+    // Call this function when app is destroyed, to prevent memory leaks
+    fun release() {
+        engine.release()
+    }
 
     override fun setup(analytics: Analytics) {
         super.setup(analytics)
@@ -67,7 +72,10 @@ class EdgeFunctions(
 
         loaded = true
 
-        val edgeFnData = settings.edgeFunction
+        val edgeFnData = LenientJson.decodeFromJsonElement(
+            EdgeFunctionsSettings.serializer(),
+            settings.edgeFunction
+        )
         setEdgeFnData(edgeFnData)
 
         loadEdgeFn(edgeFnFile)
@@ -98,38 +106,35 @@ class EdgeFunctions(
         }
     }
 
-    private fun setEdgeFnData(data: JsonObject) {
-        val versionExists = data.containsKey(VERSION_KEY)
-        val downloadURLExists = data.containsKey(DOWNLOAD_URL_KEY)
+    private fun setEdgeFnData(data: EdgeFunctionsSettings) {
+        currentData()?.let { currData ->
+            val newVersion = data.version
+            val currVersion = currData.version
 
-        if (versionExists && downloadURLExists) {
-            currentData()?.let { currData ->
-                val newVersion = data.getInt(VERSION_KEY)
-                val currVersion = currData.getInt(VERSION_KEY)
-
-                if (newVersion != null && currVersion != null && newVersion > currVersion) {
-                    updateEdgeFunctionsConfig(data)
-                }
-            } ?: updateEdgeFunctionsConfig(data)
-        }
+            if (newVersion > currVersion) {
+                updateEdgeFunctionsConfig(data)
+            }
+        } ?: updateEdgeFunctionsConfig(data)
     }
 
     private fun currentData() =
-        sharedPreferences.getString(USER_DEFAULTS_KEY, null)?.let {
-            Json.decodeFromString<JsonObject>(it)
+        sharedPreferences.getString(SHARED_PREFS_KEY, null)?.let {
+            Json.decodeFromString<EdgeFunctionsSettings>(it)
         }
 
-    private fun updateEdgeFunctionsConfig(data: JsonObject) {
-        val urlString = data.getString(DOWNLOAD_URL_KEY) ?: return
+    private fun updateEdgeFunctionsConfig(data: EdgeFunctionsSettings) {
+        val urlString = data.downloadUrl
 
-        sharedPreferences.edit().putString(USER_DEFAULTS_KEY, Json.encodeToString(data)).apply()
+        sharedPreferences.edit().putString(SHARED_PREFS_KEY, Json.encodeToString(data)).apply()
 
-        analytics.analyticsScope.launch(analytics.fileIODispatcher) {
-            if (urlString.isNotEmpty()) {
-                download(urlString, edgeFnFile)
-                analytics.log("New EdgeFunction installed.  Will be used on next app launch.")
-            } else {
-                disableBundleURL(edgeFnFile)
+        with(analytics) {
+            analyticsScope.launch(fileIODispatcher) {
+                if (urlString.isNotEmpty()) {
+                    download(urlString, edgeFnFile)
+                    log("New EdgeFunction installed.  Will be used on next app launch.")
+                } else {
+                    disableBundleURL(edgeFnFile)
+                }
             }
         }
     }

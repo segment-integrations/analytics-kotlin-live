@@ -54,6 +54,10 @@ class J2V8Engine : JavascriptEngine {
         }
     }
 
+    override fun release() {
+        underlying.release(false)
+    }
+
     override fun loadBundle(bundleStream: InputStream, completion: (JSEngineError?) -> Unit) {
         var jsError: JSEngineError? = null
         val script: String? = BufferedReader(bundleStream.reader()).use {

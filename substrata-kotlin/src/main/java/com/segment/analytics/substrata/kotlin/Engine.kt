@@ -25,6 +25,8 @@ interface JavascriptEngine {
 
     fun execute(script: String): JSValue?
     fun <T : Any> expose(key: String, value: T)
+
+    fun release()
 }
 
 sealed class JSEngineError: Exception() {
