@@ -8,14 +8,8 @@ import com.segment.analytics.kotlin.core.ScreenEvent
 import com.segment.analytics.kotlin.core.TrackEvent
 import com.segment.analytics.kotlin.core.utilities.EncodeDefaultsJson
 import com.segment.analytics.kotlin.core.utilities.LenientJson
-import com.segment.analytics.kotlin.core.utilities.safeJsonObject
 import com.segment.analytics.kotlin.core.utilities.safeJsonPrimitive
 import com.segment.analytics.substrata.kotlin.JSValue
-import com.segment.analytics.substrata.kotlin.wrapAsJSValue
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 fun BaseEvent.toJSObject(): JSValue.JSObject {
@@ -42,21 +36,3 @@ fun JSValue.JSObject.toBaseEvent(): BaseEvent? {
         else -> null
     }
 }
-
-//fun J2V8Engine.toJSObject(event: BaseEvent): JSValue.JSObject =
-//    syncRunEngine { event.toV8Object(underlying) } as JSValue.JSObject
-//
-//fun J2V8Engine.toJSObject(map: Map<String, JsonElement>): JSValue.JSObject =
-//    syncRunEngine { underlying.toV8Object(map) } as JSValue.JSObject
-
-//fun J2V8Engine.toJSArray(list: List<JsonElement>): JSValue.JSArray =
-//    syncRunEngine { underlying.toV8Array(list) } as JSValue.JSArray
-
-//fun <T: BaseEvent> toSegmentEvent(jsObj: JSValue.JSObject): T? =
-//    jsObj.content.toSegmentEvent()
-//
-//fun J2V8Engine.fromJSObject(jsObj: JSValue.JSObject): JsonObject? =
-//    syncRun { fromV8Object(jsObj.content) }
-//
-//fun J2V8Engine.fromJSArray(jsObj: JSValue.JSArray): JsonArray? =
-//    syncRun { fromV8Array(jsObj.content) }

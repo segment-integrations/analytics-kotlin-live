@@ -3,7 +3,6 @@ package com.segment.analytics.substrata.kotlin.j2v8
 import com.eclipsesource.v8.V8Object
 import com.segment.analytics.substrata.kotlin.JSValue
 import com.segment.analytics.substrata.kotlin.JavascriptDataBridge
-import com.segment.analytics.substrata.kotlin.wrapAsJSValue
 
 class J2V8DataBridge(
     private val engine: J2V8Engine
@@ -25,7 +24,7 @@ class J2V8DataBridge(
         val result = engine.syncRunEngine { v8 ->
             v8.executeScript("$DataBridgeKey.$key")
         }
-        return wrapAsJSValue(result)
+        return engine.wrapAsJSValue(result)
     }
 
     override operator fun set(key: String, value: JSValue) {
@@ -50,7 +49,7 @@ class J2V8DataBridge(
                 }
                 is JSValue.JSNull -> dataBridge.addNull(key)
                 is JSValue.JSUndefined -> dataBridge.addUndefined(key)
-                else -> Unit // NO-OP
+                else -> Unit // NO-OP, do not allow assigning functions to dataBridge
             }
         }
     }

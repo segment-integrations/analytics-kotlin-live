@@ -181,9 +181,8 @@ private fun V8.pushValue(
     value: JsonElement?,
 ) {
     when (value) {
-        null, JsonNull -> {
-            // skip it
-        }
+        null -> Unit
+        is JsonNull -> result.pushNull()
         is JsonPrimitive -> {
             when (val serialized = value.toContent()) {
                 null -> Unit /* skip */
@@ -212,7 +211,8 @@ private fun V8.setValue(
     value: JsonElement?,
 ) {
     when (value) {
-        null, JsonNull -> result.addUndefined(key)
+        null -> result.addUndefined(key)
+        is JsonNull -> result.addNull(key)
         is JsonPrimitive -> {
             when (val serialized = value.toContent()) {
                 null -> { /* skip */

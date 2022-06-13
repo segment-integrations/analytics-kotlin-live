@@ -11,9 +11,9 @@ object EmbeddedJS {
         after: ${Plugin.Type.After.toInt()},
 //        utility: ${Plugin.Type.Utility.toInt()}
     };
-    """
+    """.trimIndent()
 
-    const val EDGE_FN_BASE_SETUP_SCRIPT = """
+    val EDGE_FN_BASE_SETUP_SCRIPT = """
     class EdgeFn {
         constructor(type, destination) {
             console.log("js: EdgeFn.constructor() called");
@@ -46,7 +46,7 @@ object EmbeddedJS {
         reset() { }
         flush() { }
     }
-    """
+    """.trimIndent()
 }
 
 fun Plugin.Type.toInt() = when(this) {

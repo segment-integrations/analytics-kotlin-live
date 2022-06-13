@@ -1,5 +1,6 @@
 package com.segment.analytics.substrata.kotlin
 
+import com.eclipsesource.v8.JavaCallback
 import com.eclipsesource.v8.V8Array
 import com.eclipsesource.v8.V8Function
 import com.eclipsesource.v8.V8Object
@@ -51,7 +52,7 @@ interface JSValue {
         }
     }
 
-    class JSFunction(val fn: V8Function) : JSValue
+    class JSFunction(internal val fn: JavaCallback) : JSValue
 
     class JSObjectReference(val ref: V8Object) : JSValue {
         val content: JsonObject? = fromV8Object(ref)
@@ -61,17 +62,9 @@ interface JSValue {
     object JSNull : JSValue
 }
 
-// Use this API fro wrapping values coming from J2V8
-// Must be run on the J2V8 thread
-internal fun wrapAsJSValue(obj: Any?): JSValue {
-    return when (obj) {
-        null -> return JSValue.JSNull
-        is Boolean -> JSValue.JSBool(obj)
-        is Int -> JSValue.JSInt(obj)
-        is Double -> JSValue.JSDouble(obj)
-        is String -> JSValue.JSString(obj)
-        is V8Array -> JSValue.JSArray(obj)
-        is V8Object -> JSValue.JSObject(obj)
-        else -> JSValue.JSUndefined
-    }
-}
+public fun String.asJSValue() = JSValue.JSString(this)
+public fun Int.asJSValue() = JSValue.JSInt(this)
+public fun Boolean.asJSValue() = JSValue.JSBool(this)
+public fun Double.asJSValue() = JSValue.JSDouble(this)
+public fun JsonObject.asJSValue() = JSValue.JSObject(this)
+public fun JsonArray.asJSValue() = JSValue.JSArray(this)

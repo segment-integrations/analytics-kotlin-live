@@ -4,12 +4,14 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.Settings
+import com.segment.analytics.kotlin.core.emptyJsonObject
 import com.segment.analytics.kotlin.core.platform.EventPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.kotlin.core.platform.plugins.logger.LogFilterKind
 import com.segment.analytics.kotlin.core.platform.plugins.logger.log
 import com.segment.analytics.kotlin.core.utilities.LenientJson
 import com.segment.analytics.kotlin.core.utilities.getString
+import com.segment.analytics.substrata.kotlin.JavascriptDataBridge
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -41,7 +43,9 @@ class EdgeFunctions(
 
     private lateinit var sharedPreferences: SharedPreferences
 
-    internal val engine = J2V8Engine()
+    internal val engine = J2V8Engine.shared
+    val dataBridge: JavascriptDataBridge = engine.bridge
+
     internal var loaded = false
     private lateinit var edgeFnFile: File
 
@@ -72,13 +76,15 @@ class EdgeFunctions(
 
         loaded = true
 
-        val edgeFnData = LenientJson.decodeFromJsonElement(
-            EdgeFunctionsSettings.serializer(),
-            settings.edgeFunction
-        )
-        setEdgeFnData(edgeFnData)
+        if (settings.edgeFunction != emptyJsonObject) {
+            val edgeFnData = LenientJson.decodeFromJsonElement(
+                EdgeFunctionsSettings.serializer(),
+                settings.edgeFunction
+            )
+            setEdgeFnData(edgeFnData)
 
-        loadEdgeFn(edgeFnFile)
+            loadEdgeFn(edgeFnFile)
+        }
     }
 
     private fun loadEdgeFn(file: File) {

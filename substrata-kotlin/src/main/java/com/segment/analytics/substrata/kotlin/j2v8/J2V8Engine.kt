@@ -10,10 +10,8 @@ import com.eclipsesource.v8.V8ScriptCompilationException
 import com.eclipsesource.v8.V8ScriptExecutionException
 import com.segment.analytics.substrata.kotlin.JSEngineError
 import com.segment.analytics.substrata.kotlin.JSValue
-import com.segment.analytics.substrata.kotlin.JavascriptDataBridge
 import com.segment.analytics.substrata.kotlin.JavascriptEngine
 import com.segment.analytics.substrata.kotlin.JavascriptErrorHandler
-import com.segment.analytics.substrata.kotlin.wrapAsJSValue
 import io.alicorn.v8.V8JavaAdapter
 import java.io.BufferedReader
 import java.io.IOException
@@ -34,6 +32,12 @@ private const val TimeOutInSeconds = 120L
  * of your own as well.
  */
 class J2V8Engine : JavascriptEngine {
+
+    companion object {
+        val shared: J2V8Engine by lazy {
+            J2V8Engine()
+        }
+    }
 
     override lateinit var bridge: J2V8DataBridge
 
@@ -79,8 +83,8 @@ class J2V8Engine : JavascriptEngine {
 
     override fun get(key: String): JSValue {
         val r = jsExecutor.await {
-            var result: Any? = null
             underlying.memScope {
+                var result: Any? = null
                 underlying.get(key).let { value ->
                     if (!value.isNull()) {
                         result = value
@@ -92,8 +96,8 @@ class J2V8Engine : JavascriptEngine {
                         }
                     }
                 }
+                wrapAsJSValue(result)
             }
-            wrapAsJSValue(result)
         }
         return r
     }
@@ -127,7 +131,8 @@ class J2V8Engine : JavascriptEngine {
                         }
                     }
                     is JSValue.JSFunction -> {
-                        underlying.add(key, value.fn)
+                        // Essentially doing what expose does
+                        underlying.registerJavaMethod(value.fn, key)
                     }
                     JSValue.JSUndefined -> {
                         // omit no point in setting a key with undefined value, right?
@@ -152,7 +157,7 @@ class J2V8Engine : JavascriptEngine {
 
     override fun expose(function: JSValue.JSFunction, functionName: String) {
         jsExecutor.sync {
-            underlying.add(functionName, function.fn)
+            underlying.registerJavaMethod(function.fn, functionName)
         }
     }
 
@@ -179,7 +184,7 @@ class J2V8Engine : JavascriptEngine {
                 }
             }
             v8Obj?.let {
-                it.add(functionName, function.fn)
+                it.registerJavaMethod(function.fn, functionName)
                 underlying.add(objectName, it)
             }
         }
@@ -195,6 +200,10 @@ class J2V8Engine : JavascriptEngine {
                             is JSValue.JSBool -> push(value.content)
                             is JSValue.JSInt -> push(value.content)
                             is JSValue.JSDouble -> push(value.content)
+                            is JSValue.JSFunction -> {
+                                val fn = V8Function(underlying, value.fn)
+                                push(fn)
+                            }
                             is JSValue.JSArray -> {
                                 val jsRep = value.content
                                 jsRep?.let {
@@ -217,6 +226,42 @@ class J2V8Engine : JavascriptEngine {
         return result
     }
 
+    override fun call(function: JSValue.JSFunction, params: List<JSValue>): JSValue {
+        val result = jsExecutor.await {
+            underlying.memScope {
+                val parameters = V8Array(underlying).apply {
+                    params.forEach { value ->
+                        when (value) {
+                            is JSValue.JSString -> push(value.content)
+                            is JSValue.JSBool -> push(value.content)
+                            is JSValue.JSInt -> push(value.content)
+                            is JSValue.JSDouble -> push(value.content)
+                            is JSValue.JSFunction -> {
+                                val fn = V8Function(underlying, value.fn)
+                                push(fn)
+                            }
+                            is JSValue.JSArray -> {
+                                val jsRep = value.content
+                                jsRep?.let {
+                                    push(underlying.toV8Array(it))
+                                }
+                            }
+                            is JSValue.JSObject -> {
+                                val jsRep = value.content
+                                jsRep?.let {
+                                    push(underlying.toV8Object(it))
+                                }
+                            }
+                            is JSValue.JSUndefined -> pushUndefined()
+                        }
+                    }
+                }
+                wrapAsJSValue(function.fn.invoke(null, parameters))
+            }
+        }
+        return result
+    }
+
     override fun call(
         receiver: JSValue.JSObjectReference,
         function: String,
@@ -231,6 +276,10 @@ class J2V8Engine : JavascriptEngine {
                             is JSValue.JSBool -> push(value.content)
                             is JSValue.JSInt -> push(value.content)
                             is JSValue.JSDouble -> push(value.content)
+                            is JSValue.JSFunction -> {
+                                val fn = V8Function(underlying, value.fn)
+                                push(fn)
+                            }
                             is JSValue.JSArray -> {
                                 val jsRep = value.content
                                 jsRep?.let {
@@ -255,13 +304,7 @@ class J2V8Engine : JavascriptEngine {
 
     override fun execute(script: String): JSValue {
         val result = jsExecutor.await {
-            val r = try {
-                underlying.executeScript(script)
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                Log.d("PRAY", ex.toString())
-                null
-            }
+            val r = underlying.executeScript(script)
             wrapAsJSValue(r)
         }
         return result
@@ -273,7 +316,7 @@ class J2V8Engine : JavascriptEngine {
      */
     internal fun syncRunEngine(closure: (V8) -> Any?): JSValue {
         val result = syncRun(closure)
-        return wrapAsJSValue(result)
+        return jsExecutor.await { wrapAsJSValue(result) }
     }
 
     /*
@@ -305,7 +348,6 @@ class J2V8Engine : JavascriptEngine {
         return try {
             submit(callable).get(TimeOutInSeconds, TimeUnit.SECONDS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
             processException(ex) as T
         }
     }
@@ -340,6 +382,32 @@ class J2V8Engine : JavascriptEngine {
         return returnVal
     }
 
+    // Use this API for wrapping values coming from J2V8
+    // Must be run on the J2V8 thread
+    internal fun wrapAsJSValue(obj: Any?): JSValue {
+        return when (obj) {
+            null -> return JSValue.JSNull
+            is Boolean -> JSValue.JSBool(obj)
+            is Int -> JSValue.JSInt(obj)
+            is Double -> JSValue.JSDouble(obj)
+            is String -> JSValue.JSString(obj)
+            is V8Function -> {
+                // We are wrapping the v8Function invoke, but not synchronizing on the
+                // underlying runtime, bcos the Engine has a call api that will do it for us
+                // Also a potential pitfall is that someone exposes this returned wrapped
+                // callback, which is gonna be another wrapping, but y would anyone do that
+                val cb = JavaCallback { rec, params ->
+                    obj.call(rec, params)
+                }
+                JSValue.JSFunction(cb)
+            }
+            is V8Array -> JSValue.JSArray(obj)
+            is V8Object -> JSValue.JSObject(obj)
+            else -> JSValue.JSUndefined
+        }
+    }
+
+
     /* ===========================================================================
     APIs being called on the jsExecutor and should not be synchronized explicitly
     ============================================================================== */
@@ -364,11 +432,11 @@ class J2V8Engine : JavascriptEngine {
 }
 
 fun J2V8Engine.expose(function: JavaCallback, functionName: String) {
-    expose(JSValue.JSFunction(V8Function(underlying, function)), functionName)
+    expose(JSValue.JSFunction(function), functionName)
 }
 
 fun J2V8Engine.extend(objectName: String, function: JavaCallback, functionName: String) {
-    extend(objectName, JSValue.JSFunction(V8Function(underlying, function)), functionName)
+    extend(objectName, JSValue.JSFunction(function), functionName)
 }
 
 private fun Any?.isNull(): Boolean {

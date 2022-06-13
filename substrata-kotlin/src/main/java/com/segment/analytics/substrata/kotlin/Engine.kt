@@ -21,6 +21,7 @@ interface JavascriptEngine {
     fun extend(objectName: String, function: JSValue.JSFunction, functionName: String)
 
     fun call(function: String, params: List<JSValue> = emptyList()): JSValue?
+    fun call(function: JSValue.JSFunction, params: List<JSValue> = emptyList()): JSValue?
     fun call(receiver: JSValue.JSObjectReference, function: String, params: List<JSValue> = emptyList()): JSValue?
 
     fun execute(script: String): JSValue?
