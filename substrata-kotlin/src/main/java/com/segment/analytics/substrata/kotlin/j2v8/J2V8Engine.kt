@@ -30,6 +30,10 @@ private const val TimeOutInSeconds = 120L
  * JSEngine singleton.  Due to the performance cost of creating runtimes in J2V8,
  * we'll use a singleton primarily; though it is possible to create an instance
  * of your own as well.
+ *
+ * Most of the APIs do a good job of managing memory, but there are some exceptions.
+ * Expose, Extend, Execute, Call all *can* have potential side-effects and create
+ * memory so we should not use _memScope_ to manage memory automatically.
  */
 class J2V8Engine : JavascriptEngine {
 
@@ -192,72 +196,68 @@ class J2V8Engine : JavascriptEngine {
 
     override fun call(function: String, params: List<JSValue>): JSValue {
         val result = jsExecutor.await {
-            underlying.memScope {
-                val parameters = V8Array(underlying).apply {
-                    params.forEach { value ->
-                        when (value) {
-                            is JSValue.JSString -> push(value.content)
-                            is JSValue.JSBool -> push(value.content)
-                            is JSValue.JSInt -> push(value.content)
-                            is JSValue.JSDouble -> push(value.content)
-                            is JSValue.JSFunction -> {
-                                val fn = V8Function(underlying, value.fn)
-                                push(fn)
-                            }
-                            is JSValue.JSArray -> {
-                                val jsRep = value.content
-                                jsRep?.let {
-                                    push(underlying.toV8Array(it))
-                                }
-                            }
-                            is JSValue.JSObject -> {
-                                val jsRep = value.content
-                                jsRep?.let {
-                                    push(underlying.toV8Object(it))
-                                }
-                            }
-                            is JSValue.JSUndefined -> pushUndefined()
+            val parameters = V8Array(underlying).apply {
+                params.forEach { value ->
+                    when (value) {
+                        is JSValue.JSString -> push(value.content)
+                        is JSValue.JSBool -> push(value.content)
+                        is JSValue.JSInt -> push(value.content)
+                        is JSValue.JSDouble -> push(value.content)
+                        is JSValue.JSFunction -> {
+                            val fn = V8Function(underlying, value.fn)
+                            push(fn)
                         }
+                        is JSValue.JSArray -> {
+                            val jsRep = value.content
+                            jsRep?.let {
+                                push(underlying.toV8Array(it))
+                            }
+                        }
+                        is JSValue.JSObject -> {
+                            val jsRep = value.content
+                            jsRep?.let {
+                                push(underlying.toV8Object(it))
+                            }
+                        }
+                        is JSValue.JSUndefined -> pushUndefined()
                     }
                 }
-                wrapAsJSValue(underlying.executeFunction(function, parameters))
             }
+            wrapAsJSValue(underlying.executeFunction(function, parameters))
         }
         return result
     }
 
     override fun call(function: JSValue.JSFunction, params: List<JSValue>): JSValue {
         val result = jsExecutor.await {
-            underlying.memScope {
-                val parameters = V8Array(underlying).apply {
-                    params.forEach { value ->
-                        when (value) {
-                            is JSValue.JSString -> push(value.content)
-                            is JSValue.JSBool -> push(value.content)
-                            is JSValue.JSInt -> push(value.content)
-                            is JSValue.JSDouble -> push(value.content)
-                            is JSValue.JSFunction -> {
-                                val fn = V8Function(underlying, value.fn)
-                                push(fn)
-                            }
-                            is JSValue.JSArray -> {
-                                val jsRep = value.content
-                                jsRep?.let {
-                                    push(underlying.toV8Array(it))
-                                }
-                            }
-                            is JSValue.JSObject -> {
-                                val jsRep = value.content
-                                jsRep?.let {
-                                    push(underlying.toV8Object(it))
-                                }
-                            }
-                            is JSValue.JSUndefined -> pushUndefined()
+            val parameters = V8Array(underlying).apply {
+                params.forEach { value ->
+                    when (value) {
+                        is JSValue.JSString -> push(value.content)
+                        is JSValue.JSBool -> push(value.content)
+                        is JSValue.JSInt -> push(value.content)
+                        is JSValue.JSDouble -> push(value.content)
+                        is JSValue.JSFunction -> {
+                            val fn = V8Function(underlying, value.fn)
+                            push(fn)
                         }
+                        is JSValue.JSArray -> {
+                            val jsRep = value.content
+                            jsRep?.let {
+                                push(underlying.toV8Array(it))
+                            }
+                        }
+                        is JSValue.JSObject -> {
+                            val jsRep = value.content
+                            jsRep?.let {
+                                push(underlying.toV8Object(it))
+                            }
+                        }
+                        is JSValue.JSUndefined -> pushUndefined()
                     }
                 }
-                wrapAsJSValue(function.fn.invoke(null, parameters))
             }
+            wrapAsJSValue(function.fn.invoke(null, parameters))
         }
         return result
     }
@@ -268,36 +268,34 @@ class J2V8Engine : JavascriptEngine {
         params: List<JSValue>
     ): JSValue {
         val result = jsExecutor.await {
-            underlying.memScope {
-                val parameters = V8Array(underlying).apply {
-                    params.forEach { value ->
-                        when (value) {
-                            is JSValue.JSString -> push(value.content)
-                            is JSValue.JSBool -> push(value.content)
-                            is JSValue.JSInt -> push(value.content)
-                            is JSValue.JSDouble -> push(value.content)
-                            is JSValue.JSFunction -> {
-                                val fn = V8Function(underlying, value.fn)
-                                push(fn)
-                            }
-                            is JSValue.JSArray -> {
-                                val jsRep = value.content
-                                jsRep?.let {
-                                    push(underlying.toV8Array(it))
-                                }
-                            }
-                            is JSValue.JSObject -> {
-                                val jsRep = value.content
-                                jsRep?.let {
-                                    push(underlying.toV8Object(it))
-                                }
-                            }
-                            is JSValue.JSUndefined -> pushUndefined()
+            val parameters = V8Array(underlying).apply {
+                params.forEach { value ->
+                    when (value) {
+                        is JSValue.JSString -> push(value.content)
+                        is JSValue.JSBool -> push(value.content)
+                        is JSValue.JSInt -> push(value.content)
+                        is JSValue.JSDouble -> push(value.content)
+                        is JSValue.JSFunction -> {
+                            val fn = V8Function(underlying, value.fn)
+                            push(fn)
                         }
+                        is JSValue.JSArray -> {
+                            val jsRep = value.content
+                            jsRep?.let {
+                                push(underlying.toV8Array(it))
+                            }
+                        }
+                        is JSValue.JSObject -> {
+                            val jsRep = value.content
+                            jsRep?.let {
+                                push(underlying.toV8Object(it))
+                            }
+                        }
+                        is JSValue.JSUndefined -> pushUndefined()
                     }
                 }
-                wrapAsJSValue(receiver.ref.executeFunction(function, parameters))
             }
+            wrapAsJSValue(receiver.ref.executeFunction(function, parameters))
         }
         return result
     }
