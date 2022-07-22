@@ -33,7 +33,7 @@ android {
 
 dependencies {
     // Segment
-    implementation 'com.segment.analytics.kotlin:android:1.6.2'
+    implementation 'com.segment.analytics.kotlin:android:1.7.0'
     // TODO: replace with maven JSEngine dependency once published
     api project(':substrata-kotlin')
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2'

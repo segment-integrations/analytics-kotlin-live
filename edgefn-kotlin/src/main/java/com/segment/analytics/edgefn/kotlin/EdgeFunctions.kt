@@ -43,7 +43,7 @@ class EdgeFunctions(
 
     private lateinit var sharedPreferences: SharedPreferences
 
-    internal val engine = J2V8Engine.shared
+    val engine = J2V8Engine.shared
     val dataBridge: JavascriptDataBridge = engine.bridge
 
     internal var loaded = false
@@ -67,9 +67,12 @@ class EdgeFunctions(
         )
         val storageDirectory = context.getDir("segment-data", Context.MODE_PRIVATE)
         edgeFnFile = File(storageDirectory, EDGE_FUNCTION_FILE_NAME)
+
+        configureEngine()
     }
 
     override fun update(settings: Settings, type: Plugin.UpdateType) {
+        println("Updating edge functions")
         if (type != Plugin.UpdateType.Initial || loaded) {
             return
         }
@@ -82,12 +85,11 @@ class EdgeFunctions(
                 settings.edgeFunction
             )
             setEdgeFnData(edgeFnData)
-
-            loadEdgeFn(edgeFnFile)
         }
+        loadEdgeFn(edgeFnFile)
     }
 
-    private fun loadEdgeFn(file: File) {
+    private fun configureEngine() {
         engine.errorHandler = {
             it.printStackTrace()
         }
@@ -99,7 +101,9 @@ class EdgeFunctions(
 
         engine.execute(EmbeddedJS.ENUM_SETUP_SCRIPT)
         engine.execute(EmbeddedJS.EDGE_FN_BASE_SETUP_SCRIPT)
+    }
 
+    private fun loadEdgeFn(file: File) {
         if (fallbackFile != null && (forceFallbackFile || !file.exists())) {
             // Forced to use fallback file
             fallbackFile.copyTo(FileOutputStream(file))
