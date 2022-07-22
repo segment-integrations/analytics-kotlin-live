@@ -35,7 +35,7 @@ dependencies {
     // Segment
     implementation 'com.segment.analytics.kotlin:android:1.7.0'
     // TODO: replace with maven JSEngine dependency once published
-    api project(':substrata-kotlin')
+    api project(':substrata-kotlin:substrata-kotlin')
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2'
 
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0'
