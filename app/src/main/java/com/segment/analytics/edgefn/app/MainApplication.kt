@@ -33,8 +33,14 @@ class MainApplication : Application() {
         }
 
         val backup = resources.openRawResource(R.raw.default_edgefn)
-        analytics.add(EdgeFunctions(backup, true))
-        analytics.track("howdy doody")
+        val edgeFunctions = EdgeFunctions(backup, true)
+        analytics.add(edgeFunctions)
+        edgeFunctions.dataBridge["mcvid"] = buildJsonObject{
+            put("key1", "val1")
+            put("key2", true)
+            put("key3", 10)
+            put("key4", buildJsonObject { put("truthy", null as Boolean?) })
+        }.asJSValue()
     }
 
 }
