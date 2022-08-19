@@ -1,3 +1,0 @@
-[submodule "substrata-kotlin"]
-	path = substrata-kotlin
-	url = git@github.com:segmentio/substrata-kotlin.git

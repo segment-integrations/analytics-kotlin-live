@@ -7,6 +7,7 @@ android {
     compileSdk 31
 
     defaultConfig {
+        multiDexEnabled true
         applicationId "com.segment.analytics.edgefn.app"
         minSdk 21
         targetSdk 31
@@ -23,6 +24,7 @@ android {
         }
     }
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -32,7 +34,10 @@ android {
 }
 
 dependencies {
-    implementation project(':edgefn-kotlin')
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
+    api 'com.segment.analytics.kotlin:edgefn-kotlin:0.0.4'
+    api 'com.segment.analytics.kotlin:substrata-kotlin:0.0.5'
+    implementation 'com.eclipsesource.j2v8:j2v8:6.2.0@aar'
     implementation 'com.segment.analytics.kotlin:android:1.7.0'
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'androidx.appcompat:appcompat:1.4.1'

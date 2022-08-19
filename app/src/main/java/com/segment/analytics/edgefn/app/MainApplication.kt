@@ -7,6 +7,7 @@ import com.segment.analytics.edgefn.kotlin.EdgeFunctions
 import com.segment.analytics.kotlin.android.Analytics
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.manuallyEnableDestination
+import com.segment.analytics.substrata.kotlin.JSEngineError
 import com.segment.analytics.substrata.kotlin.asJSValue
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
 import kotlinx.serialization.json.buildJsonObject
@@ -32,8 +33,13 @@ class MainApplication : Application() {
             this.flushInterval = 0
         }
 
+        analytics.add(WebhookPlugin("https://webhook.site/5fefa55b-b5cf-4bd5-abe6-9234a003baa8", Executors.newSingleThreadExecutor()))
+
         val backup = resources.openRawResource(R.raw.default_edgefn)
         val edgeFunctions = EdgeFunctions(backup, true)
+        edgeFunctions.engine.errorHandler = {
+            println(it)
+        }
         analytics.add(edgeFunctions)
         edgeFunctions.dataBridge["mcvid"] = buildJsonObject{
             put("key1", "val1")
@@ -41,6 +47,8 @@ class MainApplication : Application() {
             put("key3", 10)
             put("key4", buildJsonObject { put("truthy", null as Boolean?) })
         }.asJSValue()
+
+        analytics.add(DestinationFilters())
     }
 
 }
