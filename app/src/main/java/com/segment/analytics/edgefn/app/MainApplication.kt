@@ -1,7 +1,6 @@
 package com.segment.analytics.edgefn.app
 
 import android.app.Application
-import com.segment.analytics.edgefn.app.filters.DestinationFilters
 import com.segment.analytics.edgefn.app.filters.WebhookPlugin
 import com.segment.analytics.edgefn.kotlin.EdgeFunctions
 import com.segment.analytics.kotlin.android.Analytics
@@ -48,7 +47,6 @@ class MainApplication : Application() {
             put("key4", buildJsonObject { put("truthy", null as Boolean?) })
         }.asJSValue()
 
-        analytics.add(DestinationFilters())
     }
 
 }
