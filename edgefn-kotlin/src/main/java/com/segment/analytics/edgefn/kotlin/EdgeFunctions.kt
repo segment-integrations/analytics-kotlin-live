@@ -38,15 +38,15 @@ class EdgeFunctions(
     companion object {
         const val EDGE_FUNCTION_FILE_NAME = "edgeFunctions.js"
         const val SHARED_PREFS_KEY = "EdgeFunctions"
+        var loaded = false
     }
     override lateinit var analytics: Analytics
 
     private lateinit var sharedPreferences: SharedPreferences
 
-    val engine = J2V8Engine.shared
+    val engine = J2V8Engine()
     val dataBridge: JavascriptDataBridge = engine.bridge
 
-    internal var loaded = false
     private lateinit var edgeFnFile: File
 
     // Call this function when app is destroyed, to prevent memory leaks
