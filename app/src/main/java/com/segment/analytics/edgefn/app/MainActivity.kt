@@ -13,9 +13,20 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        findViewById<TextView>(R.id.text_view).setOnClickListener {
-            analytics.track("howdy doody")
-            analytics.flush()
+        findViewById<TextView>(R.id.btn_checkout).setOnClickListener {
+            analytics.track("User Checkout")
+        }
+
+        findViewById<TextView>(R.id.btn_exit).setOnClickListener {
+            analytics.track("Exit Clicked")
+        }
+
+        findViewById<TextView>(R.id.btn_purchase).setOnClickListener {
+            analytics.track("Item Purchased")
+        }
+
+        findViewById<TextView>(R.id.btn_register).setOnClickListener {
+            analytics.track("User Registered")
         }
     }
 }
