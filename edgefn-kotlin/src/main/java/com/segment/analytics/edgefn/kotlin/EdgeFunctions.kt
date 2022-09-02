@@ -29,17 +29,16 @@ data class EdgeFunctionsSettings(
     val downloadUrl: String = ""
 )
 
-class EdgeFunctions(
-    private val fallbackFile: InputStream? = null,
-    private val forceFallbackFile: Boolean = false
-) : EventPlugin {
+// Singleton instance
+object EdgeFunctions : EventPlugin {
     override val type: Plugin.Type = Plugin.Type.Utility
+    var forceFallbackFile: Boolean = false
+    var fallbackFile: InputStream? = null
 
-    companion object {
-        const val EDGE_FUNCTION_FILE_NAME = "edgeFunctions.js"
-        const val SHARED_PREFS_KEY = "EdgeFunctions"
-        var loaded = false
-    }
+    private const val EDGE_FUNCTION_FILE_NAME = "edgeFunctions.js"
+    private const val SHARED_PREFS_KEY = "EdgeFunctions"
+    private var loaded = false
+    private var added = false
     override lateinit var analytics: Analytics
 
     private lateinit var sharedPreferences: SharedPreferences
@@ -56,6 +55,12 @@ class EdgeFunctions(
 
     override fun setup(analytics: Analytics) {
         super.setup(analytics)
+        if (added) {
+            // Ensure we dont re-setup if already added, and remove the duplicate
+            analytics.remove(this)
+            return
+        }
+        added = true
 
         require(analytics.configuration.application is Context) {
             "Incompatible Android Context!"
@@ -76,7 +81,6 @@ class EdgeFunctions(
         if (type != Plugin.UpdateType.Initial || loaded) {
             return
         }
-
         loaded = true
 
         if (settings.edgeFunction != emptyJsonObject) {
@@ -104,9 +108,11 @@ class EdgeFunctions(
     }
 
     private fun loadEdgeFn(file: File) {
-        if (fallbackFile != null && (forceFallbackFile || !file.exists())) {
-            // Forced to use fallback file
-            fallbackFile.copyTo(FileOutputStream(file))
+        fallbackFile?.let {
+            if (forceFallbackFile || !file.exists()) {
+                // Forced to use fallback file
+                it.copyTo(FileOutputStream(file))
+            }
         }
 
         engine.loadBundle(file.inputStream()) { error ->
