@@ -5,12 +5,10 @@ import android.content.SharedPreferences
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.Settings
 import com.segment.analytics.kotlin.core.emptyJsonObject
-import com.segment.analytics.kotlin.core.platform.EventPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.kotlin.core.platform.plugins.logger.LogFilterKind
 import com.segment.analytics.kotlin.core.platform.plugins.logger.log
 import com.segment.analytics.kotlin.core.utilities.LenientJson
-import com.segment.analytics.kotlin.core.utilities.getString
 import com.segment.analytics.substrata.kotlin.JavascriptDataBridge
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
 import kotlinx.coroutines.launch
@@ -18,7 +16,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -29,17 +26,39 @@ data class EdgeFunctionsSettings(
     val downloadUrl: String = ""
 )
 
-// Singleton instance
-object EdgeFunctions : EventPlugin {
+class EdgeFunctions: Plugin {
     override val type: Plugin.Type = Plugin.Type.Utility
+    override lateinit var analytics: Analytics
+
+    companion object {
+        private var added = false
+    }
+
+    var plugin = EdgeFunctionsRunner()
+
+    override fun setup(analytics: Analytics) {
+        super.setup(analytics)
+        if (added) return
+        added = true
+        analytics.add(plugin) // Ensure this is added only once to the timeline
+    }
+
+    fun setBackupFile(inputStream: InputStream) {
+        plugin.fallbackFile = inputStream
+    }
+
+    // Call this function when app is destroyed, to prevent memory leaks
+    fun release() {
+        plugin.release()
+    }
+}
+
+class EdgeFunctionsRunner internal constructor() : Plugin {
+    override val type: Plugin.Type = Plugin.Type.Utility
+    override lateinit var analytics: Analytics
+
     var forceFallbackFile: Boolean = false
     var fallbackFile: InputStream? = null
-
-    private const val EDGE_FUNCTION_FILE_NAME = "edgeFunctions.js"
-    private const val SHARED_PREFS_KEY = "EdgeFunctions"
-    private var loaded = false
-    private var added = false
-    override lateinit var analytics: Analytics
 
     private lateinit var sharedPreferences: SharedPreferences
 
@@ -48,6 +67,11 @@ object EdgeFunctions : EventPlugin {
 
     private lateinit var edgeFnFile: File
 
+    companion object {
+        const val SHARED_PREFS_KEY = "EdgeFunctions"
+        const val EDGE_FUNCTION_FILE_NAME = "edgeFunctions.js"
+    }
+
     // Call this function when app is destroyed, to prevent memory leaks
     fun release() {
         engine.release()
@@ -55,12 +79,6 @@ object EdgeFunctions : EventPlugin {
 
     override fun setup(analytics: Analytics) {
         super.setup(analytics)
-        if (added) {
-            // Ensure we dont re-setup if already added, and remove the duplicate
-            analytics.remove(this)
-            return
-        }
-        added = true
 
         require(analytics.configuration.application is Context) {
             "Incompatible Android Context!"
@@ -78,10 +96,9 @@ object EdgeFunctions : EventPlugin {
 
     override fun update(settings: Settings, type: Plugin.UpdateType) {
         println("Updating edge functions")
-        if (type != Plugin.UpdateType.Initial || loaded) {
+        if (type != Plugin.UpdateType.Initial) {
             return
         }
-        loaded = true
 
         if (settings.edgeFunction != emptyJsonObject) {
             val edgeFnData = LenientJson.decodeFromJsonElement(
