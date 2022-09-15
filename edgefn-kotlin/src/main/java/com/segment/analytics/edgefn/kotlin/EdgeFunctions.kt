@@ -34,26 +34,40 @@ class EdgeFunctions: Plugin {
         private var added = false
     }
 
-    var plugin = EdgeFunctionsRunner()
+    var controller = EdgeFunctionsController()
 
     override fun setup(analytics: Analytics) {
         super.setup(analytics)
         if (added) return
         added = true
-        analytics.add(plugin) // Ensure this is added only once to the timeline
+        analytics.add(controller) // Ensure this is added only once to the timeline
     }
 
     fun setBackupFile(inputStream: InputStream) {
-        plugin.fallbackFile = inputStream
+        // Find EdgeFunctionsController instance and set fallback url. Do not rely on `plugin`
+        // here since this could be the wrong EdgeFunctions Instance added to the timeline
+        if (added) {
+            analytics.find(EdgeFunctionsController::class)?.let {
+                it.fallbackFile = inputStream
+            }
+        } else {
+            controller.fallbackFile = inputStream
+        }
     }
 
     // Call this function when app is destroyed, to prevent memory leaks
     fun release() {
-        plugin.release()
+        // Find EdgeFunctionsController instance and release JS. Do not rely on `plugin`
+        // here since this could be the wrong EdgeFunctions Instance added to the timeline
+        if (added) {
+            analytics.find(EdgeFunctionsController::class)?.release()
+        } else {
+            controller.release()
+        }
     }
 }
 
-class EdgeFunctionsRunner internal constructor() : Plugin {
+class EdgeFunctionsController internal constructor() : Plugin {
     override val type: Plugin.Type = Plugin.Type.Utility
     override lateinit var analytics: Analytics
 
@@ -79,6 +93,7 @@ class EdgeFunctionsRunner internal constructor() : Plugin {
 
     override fun setup(analytics: Analytics) {
         super.setup(analytics)
+        println("================== Adding EdgeFunction plugin")
 
         require(analytics.configuration.application is Context) {
             "Incompatible Android Context!"
