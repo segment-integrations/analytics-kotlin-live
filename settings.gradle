@@ -1,0 +1,33 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/segmentio/substrata-kotlin")
+            credentials {
+                username = GITHUB_USERNAME
+                password = GITHUB_TOKEN
+            }
+        }
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/segmentio/EdgeFn-Kotlin")
+            credentials {
+                username = GITHUB_USERNAME
+                password = GITHUB_TOKEN
+            }
+        }
+    }
+}
+rootProject.name = "edgefn-kotlin"
+include ':app'
+include ':edgefn-kotlin'
