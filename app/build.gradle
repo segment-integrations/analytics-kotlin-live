@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         multiDexEnabled true
-        applicationId "com.segment.analytics.edgefn.app"
+        applicationId "com.segment.analytics.liveplugins.app"
         minSdk 21
         targetSdk 31
         versionCode 1
