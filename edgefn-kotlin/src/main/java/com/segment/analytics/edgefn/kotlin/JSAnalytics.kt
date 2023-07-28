@@ -4,7 +4,6 @@ import android.content.Context
 import com.eclipsesource.v8.V8Object
 import com.segment.analytics.kotlin.android.Analytics
 import com.segment.analytics.kotlin.core.Analytics
-import com.segment.analytics.kotlin.core.platform.DestinationPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.kotlin.core.utilities.getInt
 import com.segment.analytics.kotlin.core.utilities.getString
@@ -110,16 +109,16 @@ class JSAnalytics {
         val destination: String? = jsPluginData.getString("destination")
 
         var result = false
-        val edgeFn = EdgeFn(jsPlugin, type, engine)
+        val livePlugin = LivePlugin(jsPlugin, type, engine)
         if (destination != null) {
             val found = analytics.find(destination)
             found?.let {
-                it.add(edgeFn)
+                it.add(livePlugin)
                 result = true
             }
         } else {
             // Add it to the main timeline
-            analytics.add(edgeFn)
+            analytics.add(livePlugin)
             result = true
         }
         return result

@@ -23,7 +23,7 @@ import kotlinx.serialization.json.jsonObject
  * in the EdgeFunctions bundle.
  * EdgeFn is responsible for ensuring all data being passed is understandable by JS
  */
-internal class EdgeFn(
+internal class LivePlugin(
     private val jsPlugin: JSValue.JSObjectReference,
     override val type: Plugin.Type,
     private val engine: J2V8Engine
