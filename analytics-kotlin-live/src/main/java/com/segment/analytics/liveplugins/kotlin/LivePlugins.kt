@@ -34,7 +34,7 @@ class LivePlugins(
     override val type: Plugin.Type = Plugin.Type.Utility
 
     companion object {
-        const val EDGE_FUNCTION_FILE_NAME = "livePlugins.js"
+        const val LIVE_PLUGINS_FILE_NAME = "livePlugins.js"
         const val SHARED_PREFS_KEY = "LivePlugins"
         var loaded = false
     }
@@ -72,7 +72,7 @@ class LivePlugins(
             Context.MODE_PRIVATE
         )
         val storageDirectory = context.getDir("segment-data", Context.MODE_PRIVATE)
-        livePluginFile = File(storageDirectory, EDGE_FUNCTION_FILE_NAME)
+        livePluginFile = File(storageDirectory, LIVE_PLUGINS_FILE_NAME)
 
         configureEngine()
     }
@@ -112,7 +112,7 @@ class LivePlugins(
         engine.expose("analytics", jsAnalytics)
 
         engine.execute(EmbeddedJS.ENUM_SETUP_SCRIPT)
-        engine.execute(EmbeddedJS.EDGE_FN_BASE_SETUP_SCRIPT)
+        engine.execute(EmbeddedJS.LIVE_PLUGINS_BASE_SETUP_SCRIPT)
     }
 
     private fun loadLivePlugin(file: File) {
@@ -153,7 +153,7 @@ class LivePlugins(
             analyticsScope.launch(fileIODispatcher) {
                 if (urlString.isNotEmpty()) {
                     download(urlString, livePluginFile)
-                    log("New EdgeFunction installed.  Will be used on next app launch.")
+                    log("New LivePlugins installed.  Will be used on next app launch.")
                 } else {
                     disableBundleURL(livePluginFile)
                 }

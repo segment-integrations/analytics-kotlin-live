@@ -1,8 +1,8 @@
 package com.segment.analytics.edgefn.app
 
 import android.app.Application
-import com.segment.analytics.edgefn.app.filters.WebhookPlugin
-import com.segment.analytics.edgefn.kotlin.LivePlugins
+import com.segment.analytics.liveplugins.app.filters.WebhookPlugin
+import com.segment.analytics.liveplugins.kotlin.LivePlugins
 import com.segment.analytics.kotlin.android.Analytics
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.substrata.kotlin.asJSValue

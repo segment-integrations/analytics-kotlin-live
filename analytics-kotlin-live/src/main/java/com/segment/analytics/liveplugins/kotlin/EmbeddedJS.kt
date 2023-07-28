@@ -13,7 +13,7 @@ object EmbeddedJS {
     };
     """.trimIndent()
 
-    val EDGE_FN_BASE_SETUP_SCRIPT = """
+    val LIVE_PLUGINS_BASE_SETUP_SCRIPT = """
     class LivePlugin {
         constructor(type, destination) {
             console.log("js: LivePlugin.constructor() called");

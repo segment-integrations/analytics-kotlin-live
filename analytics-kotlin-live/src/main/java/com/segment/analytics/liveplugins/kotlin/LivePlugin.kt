@@ -20,7 +20,7 @@ import kotlinx.serialization.json.jsonObject
 
 /**
  * LivePlugin is the native Analytics Plugin representation of the jsPlugin specified
- * in the EdgeFunctions bundle.
+ * in the LivePlugins bundle.
  * LivePlugin is responsible for ensuring all data being passed is understandable by JS
  */
 internal class LivePlugin(
