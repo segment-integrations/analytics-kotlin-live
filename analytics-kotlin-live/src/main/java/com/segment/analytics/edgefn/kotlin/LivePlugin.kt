@@ -19,9 +19,9 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 
 /**
- * EdgeFn is the native Analytics Plugin representation of the jsPlugin specified
+ * LivePlugin is the native Analytics Plugin representation of the jsPlugin specified
  * in the EdgeFunctions bundle.
- * EdgeFn is responsible for ensuring all data being passed is understandable by JS
+ * LivePlugin is responsible for ensuring all data being passed is understandable by JS
  */
 internal class LivePlugin(
     private val jsPlugin: JSValue.JSObjectReference,

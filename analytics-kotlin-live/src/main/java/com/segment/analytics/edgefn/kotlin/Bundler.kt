@@ -7,7 +7,7 @@ import java.net.URL
 
 
 fun disableBundleURL(file: File) {
-    val content = "// edge functions are disabled."
+    val content = "// live plugins are disabled."
     FileOutputStream(file, false).use {
         it.write(content.toByteArray())
     }
