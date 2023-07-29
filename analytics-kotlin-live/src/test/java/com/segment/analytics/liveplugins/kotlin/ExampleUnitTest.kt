@@ -1,4 +1,4 @@
-package com.segment.analytics.edgefn.kotlin
+package com.segment.analytics.liveplugins.kotlin
 
 import org.junit.Test
 

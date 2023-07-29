@@ -1,4 +1,4 @@
-package com.segment.analytics.edgefn.kotlin
+package com.segment.analytics.liveplugins.kotlin
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.segment.analytics.edgefn.kotlin.test", appContext.packageName)
+        assertEquals("com.segment.analytics.liveplugins.kotlin.test", appContext.packageName)
     }
 }

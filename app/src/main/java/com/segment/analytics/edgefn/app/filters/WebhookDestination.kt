@@ -1,4 +1,4 @@
-package com.segment.analytics.edgefn.app.filters
+package com.segment.analytics.liveplugins.app.filters
 
 import com.segment.analytics.kotlin.core.*
 import com.segment.analytics.kotlin.core.platform.DestinationPlugin

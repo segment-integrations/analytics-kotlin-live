@@ -1,4 +1,4 @@
-package com.segment.analytics.edgefn.kotlin
+package com.segment.analytics.liveplugins.kotlin
 
 import com.segment.analytics.kotlin.core.AliasEvent
 import com.segment.analytics.kotlin.core.Analytics
@@ -19,11 +19,11 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 
 /**
- * EdgeFn is the native Analytics Plugin representation of the jsPlugin specified
- * in the EdgeFunctions bundle.
- * EdgeFn is responsible for ensuring all data being passed is understandable by JS
+ * LivePlugin is the native Analytics Plugin representation of the jsPlugin specified
+ * in the LivePlugins bundle.
+ * LivePlugin is responsible for ensuring all data being passed is understandable by JS
  */
-internal class EdgeFn(
+internal class LivePlugin(
     private val jsPlugin: JSValue.JSObjectReference,
     override val type: Plugin.Type,
     private val engine: J2V8Engine

@@ -1,11 +1,11 @@
-package com.segment.analytics.edgefn.kotlin
+package com.segment.analytics.liveplugins.kotlin
 
 import com.segment.analytics.kotlin.core.platform.Plugin
 
 // TODO do we want utility??
 object EmbeddedJS {
     val ENUM_SETUP_SCRIPT = """
-    const EdgeFnType = {
+    const LivePluginType = {
         before: ${Plugin.Type.Before.toInt()},
         enrichment: ${Plugin.Type.Enrichment.toInt()},
         after: ${Plugin.Type.After.toInt()},
@@ -13,16 +13,16 @@ object EmbeddedJS {
     };
     """.trimIndent()
 
-    val EDGE_FN_BASE_SETUP_SCRIPT = """
-    class EdgeFn {
+    val LIVE_PLUGINS_BASE_SETUP_SCRIPT = """
+    class LivePlugin {
         constructor(type, destination) {
-            console.log("js: EdgeFn.constructor() called");
+            console.log("js: LivePlugin.constructor() called");
             this.type = type;
             this.destination = destination;
         }
         update(settings, type) { }
         execute(event) {
-            console.log("js: EdgeFn.execute() called");
+            console.log("js: LivePlugin.execute() called");
             var result = event;
             switch(event.type) {
                 case "identify":
