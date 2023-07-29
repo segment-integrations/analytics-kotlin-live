@@ -1,4 +1,4 @@
-package com.segment.analytics.edgefn.kotlin
+package com.segment.analytics.liveplugins.kotlin
 
 import java.io.BufferedInputStream
 import java.io.File
@@ -7,7 +7,7 @@ import java.net.URL
 
 
 fun disableBundleURL(file: File) {
-    val content = "// edge functions are disabled."
+    val content = "// live plugins are disabled."
     FileOutputStream(file, false).use {
         it.write(content.toByteArray())
     }

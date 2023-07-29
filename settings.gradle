@@ -13,6 +13,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "edgefn-kotlin"
+rootProject.name = "analytics-kotlin-live"
 include ':app'
-include ':edgefn-kotlin'
+include ':analytics-kotlin-live'
