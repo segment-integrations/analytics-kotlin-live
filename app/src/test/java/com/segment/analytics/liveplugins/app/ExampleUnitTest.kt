@@ -1,4 +1,4 @@
-package com.segment.analytics.edgefn.app
+package com.segment.analytics.liveplugins.app
 
 import org.junit.Test
 

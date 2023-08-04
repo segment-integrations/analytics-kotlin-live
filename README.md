@@ -1,6 +1,6 @@
-# EdgeFn-Kotlin
+# Analytics-Kotlin-Live
 
 Analytics plugin to enable enrichment of events via OTA updates
 
 
-NOTE: EdgeFn-Kotlin is currently only available in Pilot
+NOTE: Analytics-Kotlin-Live is currently only available in Pilot
