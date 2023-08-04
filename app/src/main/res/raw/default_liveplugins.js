@@ -1,6 +1,6 @@
 console.log("starting example...");
 
-class TestSuper extends EdgeFn {
+class TestSuper extends LivePlugin {
     constructor(type, destination) {
         console.log("js: TestSuper.constructor() called")
         super(type, destination);
@@ -20,7 +20,7 @@ class TestSuper extends EdgeFn {
 
     track(event) {
         console.log("js: TestSuper.track() called")
-        event.context.edgeFnMessage = "This came from an EdgeFn";
+        event.context.livePluginMessage = "This came from a LivePlugin";
         const mcvid = DataBridge["mcvid"]
         if (mcvid) {
             event.context.mcvid = mcvid;
@@ -29,7 +29,7 @@ class TestSuper extends EdgeFn {
     }
 };
 
-class AnonymizeIPs extends EdgeFn {
+class AnonymizeIPs extends LivePlugin {
     execute(event) {
         event.context.ip = "xxx.xxx.xxx.xxx";
         return super.execute(event)
@@ -54,5 +54,5 @@ _ = a.track("checkoutEvent", checkoutEventProps);
 a.identify("newUser", {behaviour:"Bad"});
 a.flush();
 
-let fn = new TestSuper(EdgeFnType.enrichment, null);
+let fn = new TestSuper(LivePluginType.enrichment, null);
 analytics.add(fn);
