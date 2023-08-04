@@ -20,7 +20,7 @@ class TestSuper extends LivePlugin {
 
     track(event) {
         console.log("js: TestSuper.track() called")
-        event.context.livePluginMessage = "This came from an LivePlugins";
+        event.context.livePluginMessage = "This came from a LivePlugin";
         const mcvid = DataBridge["mcvid"]
         if (mcvid) {
             event.context.mcvid = mcvid;
