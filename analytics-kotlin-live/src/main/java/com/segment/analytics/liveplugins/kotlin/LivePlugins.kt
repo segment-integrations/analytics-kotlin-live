@@ -24,7 +24,7 @@ import java.io.InputStream
 @Serializable
 data class LivePluginsSettings(
     val version: Int = -1,
-    val downloadUrl: String = ""
+    val downloadURL: String = ""
 )
 
 class LivePlugins(
@@ -102,6 +102,7 @@ class LivePlugins(
     }
 
     private fun configureEngine() {
+
         engine.errorHandler = {
             it.printStackTrace()
         }
@@ -139,13 +140,17 @@ class LivePlugins(
         } ?: updateLivePluginsConfig(data)
     }
 
-    private fun currentData() =
-        sharedPreferences.getString(SHARED_PREFS_KEY, null)?.let {
-            Json.decodeFromString<LivePluginsSettings>(it)
+    private fun currentData(): LivePluginsSettings {
+        var currentData = LivePluginsSettings() // Default to an "empty" settings with version -1
+        val dataString = sharedPreferences.getString(SHARED_PREFS_KEY, null)
+        if (dataString != null) {
+            currentData = Json.decodeFromString<LivePluginsSettings>(dataString)
         }
+        return currentData
+    }
 
     private fun updateLivePluginsConfig(data: LivePluginsSettings) {
-        val urlString = data.downloadUrl
+        val urlString = data.downloadURL
 
         sharedPreferences.edit().putString(SHARED_PREFS_KEY, Json.encodeToString(data)).apply()
 
