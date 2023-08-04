@@ -1,8 +1,7 @@
-package com.segment.analytics.edgefn.app
+package com.segment.analytics.liveplugins.app
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.View
 import android.widget.TextView
 
 class MainActivity : AppCompatActivity() {

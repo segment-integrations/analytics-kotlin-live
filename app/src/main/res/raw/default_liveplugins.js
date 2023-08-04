@@ -20,7 +20,7 @@ class TestSuper extends EdgeFn {
 
     track(event) {
         console.log("js: TestSuper.track() called")
-        event.context.edgeFnMessage = "This came from an EdgeFn";
+        event.context.edgeFnMessage = "This came from an LivePlugins";
         const mcvid = DataBridge["mcvid"]
         if (mcvid) {
             event.context.mcvid = mcvid;
