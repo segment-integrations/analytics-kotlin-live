@@ -30,7 +30,7 @@ class MainApplication : Application() {
 
         analytics.add(WebhookPlugin("https://webhook.site/5fefa55b-b5cf-4bd5-abe6-9234a003baa8", Executors.newSingleThreadExecutor()))
 
-        val backup = resources.openRawResource(R.raw.default_edgefn)
+        val backup = resources.openRawResource(R.raw.default_liveplugins)
         val livePlugins = LivePlugins(backup, true)
         livePlugins.engine.errorHandler = {
             println(it)

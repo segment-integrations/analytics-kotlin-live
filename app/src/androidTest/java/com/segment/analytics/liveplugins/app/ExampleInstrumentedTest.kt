@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.segment.analytics.edgefn.app", appContext.packageName)
+        assertEquals("com.segment.analytics.liveplugins.app", appContext.packageName)
     }
 }
