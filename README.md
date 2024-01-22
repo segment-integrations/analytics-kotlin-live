@@ -31,10 +31,10 @@ analytics = Analytics(
             this.flushInterval = 0
         }
 
-        analytics.add(LivePlugins())
+        analytics.add(LivePlugins(fallbackFile: null))
 ```
 
-Note: A `fallbackFileURL` can be provided if you want a default file to be
+Note: A `fallbackFile` can be provided if you want a default file to be
 available at first start up or no file is configured in your space.
 
 See the [LivePluginExample](Examples/LivePluginExample/) project for a example 
