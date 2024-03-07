@@ -11,6 +11,7 @@ import com.segment.analytics.kotlin.core.platform.plugins.logger.LogFilterKind
 import com.segment.analytics.kotlin.core.platform.plugins.logger.log
 import com.segment.analytics.kotlin.core.utilities.LenientJson
 import com.segment.analytics.substrata.kotlin.JavascriptDataBridge
+import com.segment.analytics.substrata.kotlin.JavascriptEngine
 import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -20,6 +21,12 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.concurrent.CopyOnWriteArrayList
+
+interface LivePluginsDependent {
+    fun prepare(engine: JavascriptEngine)
+    fun readyToStart()
+}
 
 @Serializable
 data class LivePluginsSettings(
@@ -46,6 +53,8 @@ class LivePlugins(
     val dataBridge: JavascriptDataBridge = engine.bridge
 
     private lateinit var livePluginFile: File
+
+    private val dependents = CopyOnWriteArrayList<LivePluginsDependent>()
 
     // Call this function when app is destroyed, to prevent memory leaks
     fun release() {
@@ -101,6 +110,10 @@ class LivePlugins(
         loadLivePlugin(livePluginFile)
     }
 
+    fun addDependent(plugin: LivePluginsDependent) {
+        dependents.add(plugin)
+    }
+
     private fun configureEngine() {
 
         engine.errorHandler = {
@@ -122,9 +135,13 @@ class LivePlugins(
             fallbackFile.copyTo(FileOutputStream(file))
         }
 
+        dependents.forEach { d -> d.prepare(engine) }
         engine.loadBundle(file.inputStream()) { error ->
-            error?.let {
+            if (error != null) {
                 analytics.log(error.message ?: "", kind = LogFilterKind.ERROR)
+            }
+            else {
+                dependents.forEach { d -> d.readyToStart() }
             }
         }
     }
