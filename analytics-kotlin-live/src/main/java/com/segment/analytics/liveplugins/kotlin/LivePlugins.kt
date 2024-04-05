@@ -10,9 +10,7 @@ import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.kotlin.core.platform.plugins.logger.LogFilterKind
 import com.segment.analytics.kotlin.core.platform.plugins.logger.log
 import com.segment.analytics.kotlin.core.utilities.LenientJson
-import com.segment.analytics.substrata.kotlin.JavascriptDataBridge
-import com.segment.analytics.substrata.kotlin.JavascriptEngine
-import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
+import com.segment.analytics.substrata.kotlin.JSScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -24,7 +22,7 @@ import java.io.InputStream
 import java.util.concurrent.CopyOnWriteArrayList
 
 interface LivePluginsDependent {
-    fun prepare(engine: JavascriptEngine)
+    fun prepare(engine: JSScope)
     fun readyToStart()
 }
 
@@ -49,8 +47,9 @@ class LivePlugins(
 
     private lateinit var sharedPreferences: SharedPreferences
 
-    val engine = J2V8Engine()
-    val dataBridge: JavascriptDataBridge = engine.bridge
+    val engine = JSScope {
+        it.printStackTrace()
+    }
 
     private lateinit var livePluginFile: File
 
@@ -114,19 +113,12 @@ class LivePlugins(
         dependents.add(plugin)
     }
 
-    private fun configureEngine() {
-
-        engine.errorHandler = {
-            it.printStackTrace()
-        }
-
-        engine.expose(JSAnalytics::class, "Analytics")
-
+    private fun configureEngine() = engine.sync {
         val jsAnalytics = JSAnalytics(analytics, engine)
-        engine.expose("analytics", jsAnalytics)
+        export(jsAnalytics, "Analytics","analytics")
 
-        engine.execute(EmbeddedJS.ENUM_SETUP_SCRIPT)
-        engine.execute(EmbeddedJS.LIVE_PLUGINS_BASE_SETUP_SCRIPT)
+        evaluate(EmbeddedJS.ENUM_SETUP_SCRIPT)
+        evaluate(EmbeddedJS.LIVE_PLUGINS_BASE_SETUP_SCRIPT)
     }
 
     private fun loadLivePlugin(file: File) {
@@ -136,18 +128,19 @@ class LivePlugins(
         }
 
         dependents.forEach { d -> d.prepare(engine) }
-        engine.loadBundle(file.inputStream()) { error ->
-            if (error != null) {
-                analytics.log(error.message ?: "", kind = LogFilterKind.ERROR)
-            }
-            else {
-                dependents.forEach { d -> d.readyToStart() }
+        engine.sync {
+            loadBundle(file.inputStream()) { error ->
+                if (error != null) {
+                    analytics.log(error.message ?: "", kind = LogFilterKind.ERROR)
+                } else {
+                    dependents.forEach { d -> d.readyToStart() }
+                }
             }
         }
     }
 
     private fun setLivePluginData(data: LivePluginsSettings) {
-        currentData()?.let { currData ->
+        currentData().let { currData ->
             val newVersion = data.version
             val currVersion = currData.version
 
