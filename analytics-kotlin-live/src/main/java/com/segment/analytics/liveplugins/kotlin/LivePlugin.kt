@@ -10,11 +10,14 @@ import com.segment.analytics.kotlin.core.Settings
 import com.segment.analytics.kotlin.core.TrackEvent
 import com.segment.analytics.kotlin.core.platform.EventPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
-import com.segment.analytics.substrata.kotlin.JSValue
-import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
-import com.segment.analytics.substrata.kotlin.j2v8.toBaseEvent
-import com.segment.analytics.substrata.kotlin.j2v8.toJSObject
+import com.segment.analytics.kotlin.core.utilities.EncodeDefaultsJson
+import com.segment.analytics.kotlin.core.utilities.LenientJson
+import com.segment.analytics.kotlin.core.utilities.getString
+import com.segment.analytics.substrata.kotlin.JSObject
+import com.segment.analytics.substrata.kotlin.JSScope
+import com.segment.analytics.substrata.kotlin.JsonElementConverter
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 
@@ -24,9 +27,9 @@ import kotlinx.serialization.json.jsonObject
  * LivePlugin is responsible for ensuring all data being passed is understandable by JS
  */
 internal class LivePlugin(
-    private val jsPlugin: JSValue.JSObjectReference,
+    private val jsPlugin: JSObject,
     override val type: Plugin.Type,
-    private val engine: J2V8Engine
+    private val engine: JSScope
 ) : EventPlugin {
 
     override lateinit var analytics: Analytics
@@ -35,11 +38,12 @@ internal class LivePlugin(
         super.update(settings, type)
 
         val settingsJson = Json.encodeToJsonElement(settings).jsonObject
-        engine.call(
-            jsPlugin,
-            "update",
-            listOf(JSValue.JSObject(settingsJson), JSValue.JSString(type.toString()))
-        )
+        engine.sync {
+            call(jsPlugin,
+                "update",
+                JsonElementConverter.write(settingsJson, context),
+                type.toString())
+        }
     }
 
     override fun alias(payload: AliasEvent): BaseEvent? {
@@ -63,12 +67,32 @@ internal class LivePlugin(
     }
 
     override fun execute(event: BaseEvent): BaseEvent? {
-        val modified = engine.call(jsPlugin, "execute", listOf(event.toJSObject()))
+        val payload = EncodeDefaultsJson.encodeToJsonElement(event)
+        val modified = engine.await {
+            call(
+                jsPlugin,
+                "execute",
+                JsonElementConverter.write(payload, context)
+            )
+        }
 
-        return if (modified !is JSValue.JSObject) {
-            null
+        return if (modified is JSObject) {
+            JsonElementConverter.read(modified).jsonObject.toBaseEvent()
         } else {
-            modified.toBaseEvent()
+            null
+        }
+    }
+
+    private fun JsonObject.toBaseEvent(): BaseEvent? {
+        val type = getString("type")
+
+        return when (type) {
+            "identify" -> LenientJson.decodeFromJsonElement(IdentifyEvent.serializer(), this)
+            "track" -> LenientJson.decodeFromJsonElement(TrackEvent.serializer(), this)
+            "screen" -> LenientJson.decodeFromJsonElement(ScreenEvent.serializer(), this)
+            "group" -> LenientJson.decodeFromJsonElement(GroupEvent.serializer(), this)
+            "alias" -> LenientJson.decodeFromJsonElement(AliasEvent.serializer(), this)
+            else -> null
         }
     }
 }

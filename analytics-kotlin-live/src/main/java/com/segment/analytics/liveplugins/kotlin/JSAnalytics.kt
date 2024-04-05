@@ -1,22 +1,18 @@
 package com.segment.analytics.liveplugins.kotlin
 
 import android.content.Context
-import com.eclipsesource.v8.V8Object
 import com.segment.analytics.kotlin.android.Analytics
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.platform.Plugin
-import com.segment.analytics.kotlin.core.utilities.getInt
-import com.segment.analytics.kotlin.core.utilities.getString
-import com.segment.analytics.substrata.kotlin.JSValue
-import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
-import com.segment.analytics.substrata.kotlin.j2v8.fromV8Object
-import com.segment.analytics.substrata.kotlin.j2v8.toV8Object
+import com.segment.analytics.substrata.kotlin.JSObject
+import com.segment.analytics.substrata.kotlin.JSScope
+import com.segment.analytics.substrata.kotlin.JsonElementConverter
 
 class JSAnalytics {
 
-    internal var analytics: Analytics
-    internal var engine: J2V8Engine
-    internal val mainAnalytics: Boolean
+    internal lateinit var analytics: Analytics
+    internal lateinit var engine: JSScope
+    internal var mainAnalytics: Boolean = false
 
     val anonymousId: String
         get() = analytics.anonymousId()
@@ -24,20 +20,21 @@ class JSAnalytics {
     val userId: String?
         get() = analytics.userId()
 
-    val traits: V8Object?
-        get() {
-            var res: V8Object? = null
-            analytics.traits()?.let {
-                res = engine.underlying.toV8Object(it)
+    val traits: JSObject?
+        get() = analytics.traits()?.let {
+            engine.await {
+                JsonElementConverter.write(it, context) as JSObject
             }
-            return res
         }
 
     private val context: Any?
         get() = analytics.configuration.application
 
+    // JSEngine requires an empty constructor to be able to export this class
+    constructor() {}
+
     // This is the constructor used by the native to create the injected instance
-    constructor(analytics: Analytics, engine: J2V8Engine) {
+    constructor(analytics: Analytics, engine: JSScope) {
         this.analytics = analytics
         this.engine = engine
         mainAnalytics = true
@@ -57,32 +54,32 @@ class JSAnalytics {
         analytics.track(event)
     }
 
-    fun track(event: String, properties: V8Object) {
-        analytics.track(event, fromV8Object(properties)!!)
+    fun track(event: String, properties: JSObject) {
+        analytics.track(event, JsonElementConverter.read(properties))
     }
 
     fun identify(userId: String) {
         analytics.identify(userId)
     }
 
-    fun identify(userId: String, traits: V8Object) {
-        analytics.identify(userId, fromV8Object(traits)!!)
+    fun identify(userId: String, traits: JSObject) {
+        analytics.identify(userId, JsonElementConverter.read(traits))
     }
 
     fun screen(title: String, category: String) {
         analytics.screen(title, category)
     }
 
-    fun screen(title: String, category: String, properties: V8Object) {
-        analytics.screen(title, fromV8Object(properties)!!, category)
+    fun screen(title: String, category: String, properties: JSObject) {
+        analytics.screen(title, JsonElementConverter.read(properties), category)
     }
 
     fun group(groupId: String) {
         analytics.group(groupId)
     }
 
-    fun group(groupId: String, traits: V8Object) {
-        analytics.group(groupId, fromV8Object(traits)!!)
+    fun group(groupId: String, traits: JSObject) {
+        analytics.group(groupId, JsonElementConverter.read(traits))
     }
 
     fun alias(newId: String) {
@@ -97,22 +94,15 @@ class JSAnalytics {
         analytics.reset()
     }
 
-    fun add(plugin: V8Object): Boolean {
+    fun add(plugin: JSObject): Boolean {
         if (!mainAnalytics) return false // Only allow adding plugins to injected analytics
 
-        val jsPlugin = JSValue.JSObjectReference(plugin)
-        val jsPluginData = jsPlugin.content ?: return false
-
-        val type: Plugin.Type = jsPluginData.getInt("type")?.let {
-            pluginTypeFromInt(it)
-        } ?: return false
-        val destination: String? = jsPluginData.getString("destination")
-
+        val type: Plugin.Type = pluginTypeFromInt(plugin.getInt("type")) ?: return false
         var result = false
-        val livePlugin = LivePlugin(jsPlugin, type, engine)
-        if (destination != null) {
-            val found = analytics.find(destination)
-            found?.let {
+        val livePlugin = LivePlugin(plugin, type, engine)
+        if (plugin.contains("destination")) {
+            val destination = plugin.getString("destination")
+            analytics.find(destination)?.let {
                 it.add(livePlugin)
                 result = true
             }
