@@ -20,6 +20,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.coroutines.CoroutineContext
 
 interface LivePluginsDependent {
     fun prepare(engine: JSScope)
@@ -165,7 +166,7 @@ class LivePlugins(
         sharedPreferences.edit().putString(SHARED_PREFS_KEY, Json.encodeToString(data)).apply()
 
         with(analytics) {
-            analyticsScope.launch(fileIODispatcher) {
+            analyticsScope.launch(fileIODispatcher as CoroutineContext) {
                 if (urlString.isNotEmpty()) {
                     download(urlString, livePluginFile)
                     log("New LivePlugins installed.  Will be used on next app launch.")
