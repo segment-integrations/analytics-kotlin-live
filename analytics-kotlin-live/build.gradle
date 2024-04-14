@@ -33,11 +33,11 @@ android {
 
 dependencies {
     // Segment
-    implementation(files("libs/substrata-kotlin-debug.aar"))
+    implementation('com.segment.analytics.kotlin:substrata:0.0.8-SNAPSHOT')
     implementation 'com.segment.analytics.kotlin:android:1.9.0'
 
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'com.google.android.material:material:1.5.0'
