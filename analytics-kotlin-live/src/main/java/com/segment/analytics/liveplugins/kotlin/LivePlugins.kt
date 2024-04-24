@@ -7,7 +7,6 @@ import com.segment.analytics.kotlin.core.Settings
 import com.segment.analytics.kotlin.core.emptyJsonObject
 import com.segment.analytics.kotlin.core.platform.EventPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
-import com.segment.analytics.kotlin.core.platform.plugins.logger.LogFilterKind
 import com.segment.analytics.kotlin.core.platform.plugins.logger.log
 import com.segment.analytics.kotlin.core.utilities.LenientJson
 import com.segment.analytics.substrata.kotlin.JSScope
@@ -132,7 +131,7 @@ class LivePlugins(
         engine.sync {
             loadBundle(file.inputStream()) { error ->
                 if (error != null) {
-                    analytics.log(error.message ?: "", kind = LogFilterKind.ERROR)
+                    analytics.log(error.message ?: "")
                 } else {
                     dependents.forEach { d -> d.readyToStart() }
                 }
