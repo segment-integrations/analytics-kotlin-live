@@ -12,7 +12,6 @@ import com.segment.analytics.kotlin.core.utilities.LenientJson
 import com.segment.analytics.substrata.kotlin.JSScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -128,7 +127,7 @@ class LivePlugins(
         }
 
         dependents.forEach { d -> d.prepare(engine) }
-        engine.sync {
+        engine.launch (global = true) {
             loadBundle(file.inputStream()) { error ->
                 if (error != null) {
                     analytics.log(error.message ?: "")
