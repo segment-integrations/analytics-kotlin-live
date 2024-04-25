@@ -33,7 +33,7 @@ android {
 
 dependencies {
     // Segment
-    implementation(files("libs/substrata-kotlin-debug.aar"))
+    implementation 'com.segment.analytics.kotlin:substrata:0.0.8-SNAPSHOT'
     implementation 'com.segment.analytics.kotlin:android:1.15.0'
 
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.20"
