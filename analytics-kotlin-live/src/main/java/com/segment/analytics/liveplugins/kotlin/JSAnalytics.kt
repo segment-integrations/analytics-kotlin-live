@@ -7,6 +7,11 @@ import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.substrata.kotlin.JSObject
 import com.segment.analytics.substrata.kotlin.JSScope
 import com.segment.analytics.substrata.kotlin.JsonElementConverter
+import java.lang.ref.WeakReference
+
+object LivePluginsHolder {
+    var plugin: WeakReference<LivePlugins>? = null
+}
 
 class JSAnalytics {
 
@@ -41,13 +46,20 @@ class JSAnalytics {
     }
 
     // This is the constructor used when JS creates a new one
-    constructor(writeKey: String, baseAnalytics: JSObject) {
-        val context = baseAnalytics["context"]
-        require(context is Context) {
+    constructor(writeKey: String) {
+        val application = LivePluginsHolder.plugin?.get()?.analytics?.configuration?.application
+        val engine = LivePluginsHolder.plugin?.get()?.engine
+        require(application != null) {
+            "Application Context Not Found!"
+        }
+        require(engine != null) {
+            "JS Engine is not initialized!"
+        }
+        require(application is Context) {
             "Incompatible Android Context!"
         }
-        this.analytics = Analytics(writeKey, baseAnalytics.context as Context)
-        this.engine = baseAnalytics["context"] as JSScope
+        this.analytics = Analytics(writeKey, application)
+        this.engine = engine
         mainAnalytics = false
     }
 

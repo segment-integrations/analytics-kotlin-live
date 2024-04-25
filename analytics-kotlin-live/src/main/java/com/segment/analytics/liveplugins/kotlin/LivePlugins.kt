@@ -17,6 +17,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.coroutines.CoroutineContext
 
@@ -61,6 +62,7 @@ class LivePlugins(
 
     override fun setup(analytics: Analytics) {
         super.setup(analytics)
+        LivePluginsHolder.plugin = WeakReference(this)
 
         // if we've already got LivePlugins, we don't wanna do any setup
         if (analytics.find(LivePlugins::class) != null) {
