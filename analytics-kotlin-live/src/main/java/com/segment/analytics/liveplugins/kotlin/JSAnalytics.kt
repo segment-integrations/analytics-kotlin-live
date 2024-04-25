@@ -27,7 +27,7 @@ class JSAnalytics {
             }
         }
 
-    private val context: Any?
+    val context: Any?
         get() = analytics.configuration.application
 
     // JSEngine requires an empty constructor to be able to export this class
@@ -41,12 +41,13 @@ class JSAnalytics {
     }
 
     // This is the constructor used when JS creates a new one
-    constructor(writeKey: String, baseAnalytics: JSAnalytics) {
-        require(baseAnalytics.context is Context) {
+    constructor(writeKey: String, baseAnalytics: JSObject) {
+        val context = baseAnalytics["context"]
+        require(context is Context) {
             "Incompatible Android Context!"
         }
         this.analytics = Analytics(writeKey, baseAnalytics.context as Context)
-        this.engine = baseAnalytics.engine
+        this.engine = baseAnalytics["context"] as JSScope
         mainAnalytics = false
     }
 
@@ -100,8 +101,8 @@ class JSAnalytics {
         val type: Plugin.Type = pluginTypeFromInt(plugin.getInt("type")) ?: return false
         var result = false
         val livePlugin = LivePlugin(plugin, type, engine)
-        if (plugin.contains("destination")) {
-            val destination = plugin.getString("destination")
+        val destination = plugin["destination"]
+        if (destination is String) {
             analytics.find(destination)?.let {
                 it.add(livePlugin)
                 result = true

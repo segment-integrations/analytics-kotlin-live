@@ -68,19 +68,20 @@ internal class LivePlugin(
 
     override fun execute(event: BaseEvent): BaseEvent? {
         val payload = EncodeDefaultsJson.encodeToJsonElement(event)
-        val modified = engine.await {
-            call(
+        val ret = engine.await {
+            val modified = call(
                 jsPlugin,
                 "execute",
                 JsonElementConverter.write(payload, context)
             )
-        }
 
-        return if (modified is JSObject) {
-            JsonElementConverter.read(modified).jsonObject.toBaseEvent()
-        } else {
-            null
+            return@await if (modified is JSObject) {
+                JsonElementConverter.read(modified).jsonObject.toBaseEvent()
+            } else {
+                null
+            }
         }
+        return ret
     }
 
     private fun JsonObject.toBaseEvent(): BaseEvent? {
