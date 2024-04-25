@@ -128,13 +128,17 @@ class LivePlugins(
             fallbackFile.copyTo(FileOutputStream(file))
         }
 
-        dependents.forEach { d -> d.prepare(engine) }
+        for (d in dependents) {
+            d.prepare(engine)
+        }
         engine.launch (global = true) {
             loadBundle(file.inputStream()) { error ->
                 if (error != null) {
                     analytics.log(error.message ?: "")
                 } else {
-                    dependents.forEach { d -> d.readyToStart() }
+                    for (d in dependents) {
+                        d.readyToStart()
+                    }
                 }
             }
         }
