@@ -94,7 +94,7 @@ class LivePlugins(
             return
         }
 
-        if (type != Plugin.UpdateType.Initial || loaded) {
+        if (loaded) {
             return
         }
 
@@ -112,6 +112,11 @@ class LivePlugins(
 
     fun addDependent(plugin: LivePluginsDependent) {
         dependents.add(plugin)
+        // this plugin already loaded, notify the dependents right away
+        if (loaded) {
+            plugin.prepare(engine)
+            plugin.readyToStart()
+        }
     }
 
     private fun configureEngine() = engine.sync {
