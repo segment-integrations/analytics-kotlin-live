@@ -7,24 +7,22 @@ import com.segment.analytics.kotlin.core.Settings
 import com.segment.analytics.kotlin.core.emptyJsonObject
 import com.segment.analytics.kotlin.core.platform.EventPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
-import com.segment.analytics.kotlin.core.platform.plugins.logger.LogFilterKind
 import com.segment.analytics.kotlin.core.platform.plugins.logger.log
 import com.segment.analytics.kotlin.core.utilities.LenientJson
-import com.segment.analytics.substrata.kotlin.JavascriptDataBridge
-import com.segment.analytics.substrata.kotlin.JavascriptEngine
-import com.segment.analytics.substrata.kotlin.j2v8.J2V8Engine
+import com.segment.analytics.substrata.kotlin.JSScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.coroutines.CoroutineContext
 
 interface LivePluginsDependent {
-    fun prepare(engine: JavascriptEngine)
+    fun prepare(engine: JSScope)
     fun readyToStart()
 }
 
@@ -49,8 +47,9 @@ class LivePlugins(
 
     private lateinit var sharedPreferences: SharedPreferences
 
-    val engine = J2V8Engine()
-    val dataBridge: JavascriptDataBridge = engine.bridge
+    val engine = JSScope {
+        it.printStackTrace()
+    }
 
     private lateinit var livePluginFile: File
 
@@ -63,6 +62,7 @@ class LivePlugins(
 
     override fun setup(analytics: Analytics) {
         super.setup(analytics)
+        LivePluginsHolder.plugin = WeakReference(this)
 
         // if we've already got LivePlugins, we don't wanna do any setup
         if (analytics.find(LivePlugins::class) != null) {
@@ -94,7 +94,7 @@ class LivePlugins(
             return
         }
 
-        if (type != Plugin.UpdateType.Initial || loaded) {
+        if (loaded) {
             return
         }
 
@@ -112,21 +112,19 @@ class LivePlugins(
 
     fun addDependent(plugin: LivePluginsDependent) {
         dependents.add(plugin)
+        // this plugin already loaded, notify the dependents right away
+        if (loaded) {
+            plugin.prepare(engine)
+            plugin.readyToStart()
+        }
     }
 
-    private fun configureEngine() {
-
-        engine.errorHandler = {
-            it.printStackTrace()
-        }
-
-        engine.expose(JSAnalytics::class, "Analytics")
-
+    private fun configureEngine() = engine.sync {
         val jsAnalytics = JSAnalytics(analytics, engine)
-        engine.expose("analytics", jsAnalytics)
+        export(jsAnalytics, "Analytics","analytics")
 
-        engine.execute(EmbeddedJS.ENUM_SETUP_SCRIPT)
-        engine.execute(EmbeddedJS.LIVE_PLUGINS_BASE_SETUP_SCRIPT)
+        evaluate(EmbeddedJS.ENUM_SETUP_SCRIPT)
+        evaluate(EmbeddedJS.LIVE_PLUGINS_BASE_SETUP_SCRIPT)
     }
 
     private fun loadLivePlugin(file: File) {
@@ -135,19 +133,24 @@ class LivePlugins(
             fallbackFile.copyTo(FileOutputStream(file))
         }
 
-        dependents.forEach { d -> d.prepare(engine) }
-        engine.loadBundle(file.inputStream()) { error ->
-            if (error != null) {
-                analytics.log(error.message ?: "", kind = LogFilterKind.ERROR)
-            }
-            else {
-                dependents.forEach { d -> d.readyToStart() }
+        for (d in dependents) {
+            d.prepare(engine)
+        }
+        engine.launch (global = true) {
+            loadBundle(file.inputStream()) { error ->
+                if (error != null) {
+                    analytics.log(error.message ?: "")
+                } else {
+                    for (d in dependents) {
+                        d.readyToStart()
+                    }
+                }
             }
         }
     }
 
     private fun setLivePluginData(data: LivePluginsSettings) {
-        currentData()?.let { currData ->
+        currentData().let { currData ->
             val newVersion = data.version
             val currVersion = currData.version
 
@@ -172,7 +175,7 @@ class LivePlugins(
         sharedPreferences.edit().putString(SHARED_PREFS_KEY, Json.encodeToString(data)).apply()
 
         with(analytics) {
-            analyticsScope.launch(fileIODispatcher) {
+            analyticsScope.launch(fileIODispatcher as CoroutineContext) {
                 if (urlString.isNotEmpty()) {
                     download(urlString, livePluginFile)
                     log("New LivePlugins installed.  Will be used on next app launch.")
