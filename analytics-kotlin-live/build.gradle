@@ -33,8 +33,8 @@ android {
 
 dependencies {
     // Segment
-    implementation 'com.segment.analytics.kotlin:substrata:0.0.8-SNAPSHOT'
-    implementation 'com.segment.analytics.kotlin:android:1.15.0'
+    implementation 'com.segment.analytics.kotlin:substrata:1.0.0'
+    implementation 'com.segment.analytics.kotlin:android:1.16.0'
 
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.20"
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
