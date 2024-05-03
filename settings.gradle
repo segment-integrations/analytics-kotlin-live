@@ -11,9 +11,6 @@ dependencyResolutionManagement {
         mavenLocal()
         google()
         mavenCentral()
-        maven {
-            url = "https://oss.sonatype.org/content/repositories/snapshots/"
-        }
     }
 }
 rootProject.name = "analytics-kotlin-live"
