@@ -47,7 +47,7 @@ const checkoutEventProps = {
     amount: "$1337.00"
 }
 
-let a = new Analytics("s0gnfvAubC5OqMzYEjqdAwLiVSGHmaZy", analytics);
+let a = new Analytics("HGSe7bCEnT78Pfc6FEZcylGrl5fqkfcA");
 _ = a.track("testtest")
 _ = a.track("userRegisteredEvent", userRegisteredEventProps);
 _ = a.track("checkoutEvent", checkoutEventProps);
