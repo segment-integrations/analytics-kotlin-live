@@ -3,10 +3,14 @@ package com.segment.analytics.liveplugins.kotlin
 import android.content.Context
 import com.segment.analytics.kotlin.android.Analytics
 import com.segment.analytics.kotlin.core.Analytics
+import com.segment.analytics.kotlin.core.BaseEvent
 import com.segment.analytics.kotlin.core.platform.Plugin
+import com.segment.analytics.kotlin.core.utilities.putInContext
 import com.segment.analytics.substrata.kotlin.JSObject
 import com.segment.analytics.substrata.kotlin.JSScope
 import com.segment.analytics.substrata.kotlin.JsonElementConverter
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.lang.ref.WeakReference
 
 object LivePluginsHolder {
@@ -64,39 +68,57 @@ class JSAnalytics {
     }
 
     fun track(event: String) {
-        analytics.track(event)
+        analytics.track(event) {
+            it?.insertEventOrigin()
+        }
     }
 
     fun track(event: String, properties: JSObject) {
-        analytics.track(event, JsonElementConverter.read(properties))
+        analytics.track(event, JsonElementConverter.read(properties)) {
+            it?.insertEventOrigin()
+        }
     }
 
     fun identify(userId: String) {
-        analytics.identify(userId)
+        analytics.identify(userId) {
+            it?.insertEventOrigin()
+        }
     }
 
     fun identify(userId: String, traits: JSObject) {
-        analytics.identify(userId, JsonElementConverter.read(traits))
+        analytics.identify(userId, JsonElementConverter.read(traits)) {
+            it?.insertEventOrigin()
+        }
     }
 
     fun screen(title: String, category: String) {
-        analytics.screen(title, category)
+        analytics.screen(title, category) {
+            it?.insertEventOrigin()
+        }
     }
 
     fun screen(title: String, category: String, properties: JSObject) {
-        analytics.screen(title, JsonElementConverter.read(properties), category)
+        analytics.screen(title, JsonElementConverter.read(properties), category) {
+            it?.insertEventOrigin()
+        }
     }
 
     fun group(groupId: String) {
-        analytics.group(groupId)
+        analytics.group(groupId) {
+            it?.insertEventOrigin()
+        }
     }
 
     fun group(groupId: String, traits: JSObject) {
-        analytics.group(groupId, JsonElementConverter.read(traits))
+        analytics.group(groupId, JsonElementConverter.read(traits)) {
+            it?.insertEventOrigin()
+        }
     }
 
     fun alias(newId: String) {
-        analytics.alias(newId)
+        analytics.alias(newId) {
+            it?.insertEventOrigin()
+        }
     }
 
     fun flush() {
@@ -125,5 +147,11 @@ class JSAnalytics {
             result = true
         }
         return result
+    }
+
+    private fun BaseEvent.insertEventOrigin() : BaseEvent {
+        return putInContext("__eventOrigin", buildJsonObject {
+            put("type", "js")
+        })
     }
 }
