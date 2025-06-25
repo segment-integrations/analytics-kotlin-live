@@ -131,8 +131,13 @@ class JSAnalytics {
 
     fun add(plugin: JSObject): Boolean {
         if (!mainAnalytics) return false // Only allow adding plugins to injected analytics
-
         val type: Plugin.Type = pluginTypeFromInt(plugin.getInt("type")) ?: return false
+
+        // persist plugin in the global scope to avoid being garbage collected
+        engine.sync {
+            this[plugin.ref.toString()] = plugin
+        }
+
         var result = false
         val livePlugin = LivePlugin(plugin, type, engine)
         val destination = plugin["destination"]
