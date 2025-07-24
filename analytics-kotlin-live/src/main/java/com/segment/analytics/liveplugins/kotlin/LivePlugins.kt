@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.Settings
+import com.segment.analytics.kotlin.core.WaitingPlugin
 import com.segment.analytics.kotlin.core.emptyJsonObject
 import com.segment.analytics.kotlin.core.platform.EventPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
@@ -20,6 +21,8 @@ import java.io.InputStream
 import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.coroutines.CoroutineContext
+import androidx.core.content.edit
+import kotlinx.serialization.json.decodeFromJsonElement
 
 interface LivePluginsDependent {
     fun prepare(engine: JSScope)
@@ -35,7 +38,7 @@ data class LivePluginsSettings(
 class LivePlugins(
     private val fallbackFile: InputStream? = null,
     private val forceFallbackFile: Boolean = false
-) : EventPlugin {
+) : EventPlugin, WaitingPlugin {
     override val type: Plugin.Type = Plugin.Type.Utility
 
     companion object {
@@ -61,7 +64,8 @@ class LivePlugins(
     }
 
     override fun setup(analytics: Analytics) {
-        super.setup(analytics)
+        super<WaitingPlugin>.setup(analytics)
+
         LivePluginsHolder.plugin = WeakReference(this)
 
         // if we've already got LivePlugins, we don't wanna do any setup
@@ -100,13 +104,7 @@ class LivePlugins(
 
         loaded = true
 
-        if (settings.edgeFunction != emptyJsonObject) {
-            val livePluginsData = LenientJson.decodeFromJsonElement(
-                LivePluginsSettings.serializer(),
-                settings.edgeFunction
-            )
-            setLivePluginData(livePluginsData)
-        }
+        updateLivePlugin(settings)
         loadLivePlugin(livePluginFile)
     }
 
@@ -145,34 +143,40 @@ class LivePlugins(
                         d.readyToStart()
                     }
                 }
+
+                resume()
             }
         }
     }
 
-    private fun setLivePluginData(data: LivePluginsSettings) {
-        currentData().let { currData ->
-            val newVersion = data.version
-            val currVersion = currData.version
-
-            if (newVersion > currVersion) {
-                updateLivePluginsConfig(data)
+    private fun updateLivePlugin(settings: Settings) {
+        if (settings.edgeFunction != emptyJsonObject) {
+            LenientJson.decodeFromJsonElement<LivePluginsSettings>(
+                settings.edgeFunction
+            ).also {
+                if (shouldUpdateLivePlugin(it)) {
+                    performLivePluginUpdate(it)
+                }
             }
-        } ?: updateLivePluginsConfig(data)
-    }
-
-    private fun currentData(): LivePluginsSettings {
-        var currentData = LivePluginsSettings() // Default to an "empty" settings with version -1
-        val dataString = sharedPreferences.getString(SHARED_PREFS_KEY, null)
-        if (dataString != null) {
-            currentData = Json.decodeFromString<LivePluginsSettings>(dataString)
         }
-        return currentData
     }
 
-    private fun updateLivePluginsConfig(data: LivePluginsSettings) {
+    private fun shouldUpdateLivePlugin(livePluginSettings: LivePluginsSettings): Boolean {
+        val cache = sharedPreferences.getString(SHARED_PREFS_KEY, null)
+        if (cache != null) {
+            val cachedLivePluginSettings = Json.decodeFromString<LivePluginsSettings>(cache)
+            if (livePluginSettings.version > cachedLivePluginSettings.version) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private fun performLivePluginUpdate(data: LivePluginsSettings) {
         val urlString = data.downloadURL
 
-        sharedPreferences.edit().putString(SHARED_PREFS_KEY, Json.encodeToString(data)).apply()
+        sharedPreferences.edit { putString(SHARED_PREFS_KEY, Json.encodeToString(data)) }
 
         with(analytics) {
             analyticsScope.launch(fileIODispatcher as CoroutineContext) {
