@@ -6,9 +6,12 @@ import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.BaseEvent
 import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.kotlin.core.utilities.putInContext
+import com.segment.analytics.kotlin.core.utilities.updateJsonObject
 import com.segment.analytics.substrata.kotlin.JSObject
 import com.segment.analytics.substrata.kotlin.JSScope
 import com.segment.analytics.substrata.kotlin.JsonElementConverter
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.lang.ref.WeakReference
@@ -75,49 +78,77 @@ class JSAnalytics {
 
     fun track(event: String, properties: JSObject) {
         analytics.track(event, JsonElementConverter.read(properties)) {
-            it?.insertEventOrigin()
+            it?.insertContext()
+        }
+    }
+
+    fun track(event: String, properties: JSObject, enrichments: JSObject) {
+        val jsonElement = JsonElementConverter.read(enrichments)
+        analytics.track(event, JsonElementConverter.read(properties)) {
+            it?.insertContext(jsonElement)
         }
     }
 
     fun identify(userId: String) {
         analytics.identify(userId) {
-            it?.insertEventOrigin()
+            it?.insertContext()
         }
     }
 
     fun identify(userId: String, traits: JSObject) {
         analytics.identify(userId, JsonElementConverter.read(traits)) {
-            it?.insertEventOrigin()
+            it?.insertContext()
+        }
+    }
+
+    fun identify(userId: String, traits: JSObject, enrichments: JSObject) {
+        val jsonElement = JsonElementConverter.read(enrichments)
+        analytics.identify(userId, JsonElementConverter.read(traits)) {
+            it?.insertContext(jsonElement)
         }
     }
 
     fun screen(title: String, category: String) {
         analytics.screen(title, category) {
-            it?.insertEventOrigin()
+            it?.insertContext()
         }
     }
 
     fun screen(title: String, category: String, properties: JSObject) {
         analytics.screen(title, JsonElementConverter.read(properties), category) {
-            it?.insertEventOrigin()
+            it?.insertContext()
+        }
+    }
+
+    fun screen(title: String, category: String, properties: JSObject, enrichments: JSObject) {
+        val jsonElement = JsonElementConverter.read(enrichments)
+        analytics.screen(title, JsonElementConverter.read(properties), category) {
+            it?.insertContext(jsonElement)
         }
     }
 
     fun group(groupId: String) {
         analytics.group(groupId) {
-            it?.insertEventOrigin()
+            it?.insertContext()
         }
     }
 
     fun group(groupId: String, traits: JSObject) {
         analytics.group(groupId, JsonElementConverter.read(traits)) {
-            it?.insertEventOrigin()
+            it?.insertContext()
+        }
+    }
+
+    fun group(groupId: String, traits: JSObject, enrichments: JSObject) {
+        val jsonElement = JsonElementConverter.read(enrichments)
+        analytics.group(groupId, JsonElementConverter.read(traits)) {
+            it?.insertContext(jsonElement)
         }
     }
 
     fun alias(newId: String) {
         analytics.alias(newId) {
-            it?.insertEventOrigin()
+            it?.insertContext()
         }
     }
 
@@ -157,6 +188,17 @@ class JSAnalytics {
     private fun BaseEvent.insertEventOrigin() : BaseEvent {
         return putInContext("__eventOrigin", buildJsonObject {
             put("type", "js")
+            put("version", "")
         })
+    }
+
+    private fun BaseEvent.insertContext(enrichments: JsonElement? = null) : BaseEvent {
+        val modified = insertEventOrigin()
+        if (enrichments is JsonObject) {
+            modified.context = updateJsonObject(modified.context) {
+                it.putAll(enrichments)
+            }
+        }
+        return modified
     }
 }
