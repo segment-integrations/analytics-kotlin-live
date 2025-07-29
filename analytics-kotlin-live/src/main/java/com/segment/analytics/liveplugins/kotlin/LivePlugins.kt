@@ -22,6 +22,7 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.coroutines.CoroutineContext
 import androidx.core.content.edit
+import com.segment.analytics.substrata.kotlin.JSExceptionHandler
 import kotlinx.serialization.json.decodeFromJsonElement
 
 interface LivePluginsDependent {
@@ -37,7 +38,8 @@ data class LivePluginsSettings(
 
 class LivePlugins(
     private val fallbackFile: InputStream? = null,
-    private val forceFallbackFile: Boolean = false
+    private val forceFallbackFile: Boolean = false,
+    exceptionHandler: JSExceptionHandler? = null
 ) : EventPlugin, WaitingPlugin {
     override val type: Plugin.Type = Plugin.Type.Utility
 
@@ -50,9 +52,7 @@ class LivePlugins(
 
     private lateinit var sharedPreferences: SharedPreferences
 
-    val engine = JSScope {
-        it.printStackTrace()
-    }
+    val engine = JSScope(exceptionHandler = exceptionHandler)
 
     private lateinit var livePluginFile: File
 
