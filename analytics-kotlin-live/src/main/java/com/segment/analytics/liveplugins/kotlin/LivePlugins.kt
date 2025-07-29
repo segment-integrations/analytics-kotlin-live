@@ -39,7 +39,8 @@ data class LivePluginsSettings(
 class LivePlugins(
     private val fallbackFile: InputStream? = null,
     private val forceFallbackFile: Boolean = false,
-    exceptionHandler: JSExceptionHandler? = null
+    exceptionHandler: JSExceptionHandler? = null,
+    private val localJS: List<InputStream> = listOf()
 ) : EventPlugin, WaitingPlugin {
     override val type: Plugin.Type = Plugin.Type.Utility
 
@@ -135,6 +136,10 @@ class LivePlugins(
             d.prepare(engine)
         }
         engine.launch (global = true) {
+            for (js in localJS) {
+                loadBundle(js)
+            }
+
             loadBundle(file.inputStream()) { error ->
                 if (error != null) {
                     analytics.log(error.message ?: "")
