@@ -168,9 +168,12 @@ class LivePlugins(
             if (livePluginSettings.version > cachedLivePluginSettings.version) {
                 return true
             }
+            else {
+                return false
+            }
         }
 
-        return false
+        return true
     }
 
     private fun performLivePluginUpdate(data: LivePluginsSettings) {
