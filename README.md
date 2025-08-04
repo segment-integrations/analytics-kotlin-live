@@ -13,6 +13,14 @@ plugin.
 
 ## Getting Started
 
+Add the LivePlugins plugin dependency to your `build.gradle`
+
+```kotlin
+   dependencies {
+     implementation 'com.segment.analytics.kotlin:analytics-kotlin-live:<latest_version>'
+   }
+```
+
 Add the LivePlugins plugin to your Analytics instance
 
 ```kotlin
