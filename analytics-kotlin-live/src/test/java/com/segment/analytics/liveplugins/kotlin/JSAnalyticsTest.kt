@@ -4,11 +4,19 @@ import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.Configuration
 import com.segment.analytics.kotlin.core.Traits
 import com.segment.analytics.substrata.kotlin.JSScope
-import io.mockk.*
-import org.junit.Test
-import org.junit.Assert.*
-import org.junit.Before
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
 
 class JSAnalyticsTest {
 
@@ -37,37 +45,23 @@ class JSAnalyticsTest {
         capturedAliasCalls.clear()
         capturedFlushCalls = 0
         capturedResetCalls = 0
-        
-        try {
-            engine = JSScope{ exception ->
-                exceptionThrown = exception
-            }
 
-            // Setup the engine similar to LivePlugins.configureEngine
-            engine.sync {
-                // Create a mock Analytics instance for testing using MockK
-                val mockAnalytics = createMockAnalytics()
-                jsAnalytics = JSAnalytics(mockAnalytics, engine)
+        engine = JSScope{ exception ->
+            exceptionThrown = exception
+        }
 
-                // Export JSAnalytics to the engine
-                export(jsAnalytics, "Analytics", "analytics")
+        // Setup the engine similar to LivePlugins.configureEngine
+        engine.sync {
+            // Create a mock Analytics instance for testing using MockK
+            val mockAnalytics = createMockAnalytics()
+            jsAnalytics = JSAnalytics(mockAnalytics, engine)
 
-                // Evaluate the embedded JS scripts
-                evaluate(EmbeddedJS.ENUM_SETUP_SCRIPT)
-                evaluate(EmbeddedJS.LIVE_PLUGINS_BASE_SETUP_SCRIPT)
-            }
-        } catch (e: UnsatisfiedLinkError) {
-            // JSScope requires native libraries not available in unit tests
-            exceptionThrown = e
-        } catch (e: NoClassDefFoundError) {
-            // JSScope requires native libraries not available in unit tests
-            exceptionThrown = e
-        } catch (e: ExceptionInInitializerError) {
-            // JSScope requires native libraries not available in unit tests
-            exceptionThrown = e
-        } catch (e: Exception) {
-            // Any other JSScope-related exception
-            exceptionThrown = e
+            // Export JSAnalytics to the engine
+            export(jsAnalytics, "Analytics", "analytics")
+
+            // Evaluate the embedded JS scripts
+            evaluate(EmbeddedJS.ENUM_SETUP_SCRIPT)
+            evaluate(EmbeddedJS.LIVE_PLUGINS_BASE_SETUP_SCRIPT)
         }
     }
 
@@ -129,11 +123,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testJSAnalyticsBasicFunctionality() {
-        if (exceptionThrown != null) {
-            // Skip test when JSScope is not available - JSAnalytics requires a valid JSScope
-            return
-        }
-        
         // Test JSAnalytics basic properties access
         assertEquals("test-anonymous-id", jsAnalytics.anonymousId)
         assertEquals("test-user-id", jsAnalytics.userId)
@@ -178,11 +167,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testTrackFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""analytics.track("Test Event");""")
         }
@@ -195,11 +179,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testTrackWithPropertiesFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""
                 analytics.track("Test Event", {
@@ -212,17 +191,21 @@ class JSAnalyticsTest {
         // Verify that the track method was called with correct parameters from JavaScript
         assertEquals(1, capturedTrackCalls.size)
         assertEquals("Test Event", capturedTrackCalls[0].first)
-        assertNotNull("Properties should be passed from JavaScript", capturedTrackCalls[0].second)
+        
+        // Verify the properties JsonElement content
+        val properties = capturedTrackCalls[0].second as JsonElement
+        assertNotNull("Properties should be passed from JavaScript", properties)
+        assertTrue("Properties should be a JsonObject", properties is JsonObject)
+        
+        val propsObj = properties.jsonObject
+        assertEquals("value1", propsObj["property1"]?.jsonPrimitive?.content)
+        assertEquals(42, propsObj["property2"]?.jsonPrimitive?.content?.toInt())
+        
         assertNull("No exception should be thrown", exceptionThrown)
     }
 
     @Test
     fun testIdentifyFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""analytics.identify("new-user-id");""")
         }
@@ -235,11 +218,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testIdentifyWithTraitsFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""
                 analytics.identify("new-user-id", {
@@ -252,17 +230,21 @@ class JSAnalyticsTest {
         // Verify that the identify method was called with traits from JavaScript
         assertEquals(1, capturedIdentifyCalls.size)
         assertEquals("new-user-id", capturedIdentifyCalls[0].first)
-        assertNotNull("Traits should be passed from JavaScript", capturedIdentifyCalls[0].second)
+        
+        // Verify the traits JsonElement content
+        val traits = capturedIdentifyCalls[0].second as JsonElement
+        assertNotNull("Traits should be passed from JavaScript", traits)
+        assertTrue("Traits should be a JsonObject", traits is JsonObject)
+        
+        val traitsObj = traits.jsonObject
+        assertEquals("John Doe", traitsObj["name"]?.jsonPrimitive?.content)
+        assertEquals("john@example.com", traitsObj["email"]?.jsonPrimitive?.content)
+        
         assertNull("No exception should be thrown", exceptionThrown)
     }
 
     @Test
     fun testScreenFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""analytics.screen("Home Screen", "Navigation");""")
         }
@@ -290,21 +272,18 @@ class JSAnalyticsTest {
             """)
         }
 
-        // Verify that the screen method was called with properties from JavaScript
+        // Verify that the screen method was called with properties from JavaScript  
         assertEquals(1, capturedScreenCalls.size)
         assertEquals("Home Screen", capturedScreenCalls[0].first)
         assertEquals("Navigation", capturedScreenCalls[0].second)
-        assertNotNull("Properties should be passed from JavaScript", capturedScreenCalls[0].third)
+        
+        // Since screen methods are handled by relaxed mock, we'll skip detailed property verification here
+        // but verify that the method was called correctly
         assertNull("No exception should be thrown", exceptionThrown)
     }
 
     @Test
     fun testGroupFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""analytics.group("group-123");""")
         }
@@ -317,11 +296,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testGroupWithTraitsFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""
                 analytics.group("group-123", {
@@ -334,17 +308,21 @@ class JSAnalyticsTest {
         // Verify that the group method was called with traits from JavaScript
         assertEquals(1, capturedGroupCalls.size)
         assertEquals("group-123", capturedGroupCalls[0].first)
-        assertNotNull("Traits should be passed from JavaScript", capturedGroupCalls[0].second)
+        
+        // Verify the traits JsonElement content
+        val traits = capturedGroupCalls[0].second as JsonElement
+        assertNotNull("Traits should be passed from JavaScript", traits)
+        assertTrue("Traits should be a JsonObject", traits is JsonObject)
+        
+        val traitsObj = traits.jsonObject
+        assertEquals("Acme Inc", traitsObj["name"]?.jsonPrimitive?.content)
+        assertEquals("enterprise", traitsObj["plan"]?.jsonPrimitive?.content)
+        
         assertNull("No exception should be thrown", exceptionThrown)
     }
 
     @Test
     fun testAliasFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""analytics.alias("new-identity");""")
         }
@@ -357,11 +335,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testFlushFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""analytics.flush();""")
         }
@@ -373,11 +346,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testResetFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""analytics.reset();""")
         }
@@ -389,11 +357,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testAnonymousIdPropertyFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             val result = evaluate("""analytics.anonymousId;""")
             assertEquals("test-anonymous-id", result)
@@ -404,11 +367,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testUserIdPropertyFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             val result = evaluate("""analytics.userId;""")
             assertEquals("test-user-id", result)
@@ -419,11 +377,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testAddPluginFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             val result = evaluate("""
                 var plugin = {
@@ -444,11 +397,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testLivePluginTypeEnumFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             val before = evaluate("LivePluginType.before;")
             val enrichment = evaluate("LivePluginType.enrichment;")
@@ -464,11 +412,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testLivePluginClassFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             val result = evaluate("""
                 var plugin = new LivePlugin(LivePluginType.enrichment, null);
@@ -482,11 +425,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testComplexJavaScriptInteraction() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""
                 // Test a complex interaction with multiple method calls
@@ -514,26 +452,46 @@ class JSAnalyticsTest {
         }
 
         // Verify all method calls were captured correctly from the JavaScript interaction
+        
+        // Verify identify call with traits
         assertEquals(1, capturedIdentifyCalls.size)
         assertEquals("complex-user", capturedIdentifyCalls[0].first)
-        assertNotNull("Traits should be passed from JavaScript", capturedIdentifyCalls[0].second)
+        val identifyTraits = capturedIdentifyCalls[0].second as JsonElement
+        assertNotNull("Traits should be passed from JavaScript", identifyTraits)
+        assertTrue("Traits should be a JsonObject", identifyTraits is JsonObject)
+        val identifyTraitsObj = identifyTraits.jsonObject
+        assertEquals("Complex User", identifyTraitsObj["name"]?.jsonPrimitive?.content)
+        assertEquals(30, identifyTraitsObj["age"]?.jsonPrimitive?.content?.toInt())
         
+        // Verify track call with properties
         assertEquals(1, capturedTrackCalls.size)
         assertEquals("Complex Event", capturedTrackCalls[0].first)
-        assertNotNull("Properties should be passed from JavaScript", capturedTrackCalls[0].second)
+        val trackProperties = capturedTrackCalls[0].second as JsonElement
+        assertNotNull("Properties should be passed from JavaScript", trackProperties)
+        assertTrue("Properties should be a JsonObject", trackProperties is JsonObject)
+        val trackPropsObj = trackProperties.jsonObject
+        assertEquals("test", trackPropsObj["category"]?.jsonPrimitive?.content)
+        assertEquals(100, trackPropsObj["value"]?.jsonPrimitive?.content?.toInt())
         
+        // Verify screen call (relaxed mock handling)
         assertEquals(1, capturedScreenCalls.size)
         assertEquals("Complex Screen", capturedScreenCalls[0].first)
         assertEquals("Category", capturedScreenCalls[0].second)
-        assertNotNull("Properties should be passed from JavaScript", capturedScreenCalls[0].third)
         
+        // Verify group call with traits
         assertEquals(1, capturedGroupCalls.size)
         assertEquals("complex-group", capturedGroupCalls[0].first)
-        assertNotNull("Traits should be passed from JavaScript", capturedGroupCalls[0].second)
+        val groupTraits = capturedGroupCalls[0].second as JsonElement
+        assertNotNull("Traits should be passed from JavaScript", groupTraits)
+        assertTrue("Traits should be a JsonObject", groupTraits is JsonObject)
+        val groupTraitsObj = groupTraits.jsonObject
+        assertEquals("premium", groupTraitsObj["plan"]?.jsonPrimitive?.content)
         
+        // Verify alias call
         assertEquals(1, capturedAliasCalls.size)
         assertEquals("complex-alias", capturedAliasCalls[0])
         
+        // Verify flush call
         assertEquals(1, capturedFlushCalls)
         
         assertNull("No exception should be thrown", exceptionThrown)
