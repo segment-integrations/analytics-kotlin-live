@@ -3,13 +3,16 @@ package com.segment.analytics.liveplugins.kotlin
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.segment.analytics.kotlin.android.AndroidStorageProvider
+import com.segment.analytics.kotlin.core.AliasEvent
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.Configuration
-import com.segment.analytics.kotlin.core.Traits
+import com.segment.analytics.kotlin.core.GroupEvent
+import com.segment.analytics.kotlin.core.IdentifyEvent
+import com.segment.analytics.kotlin.core.TrackEvent
+import com.segment.analytics.liveplugins.kotlin.utils.StubPlugin
 import com.segment.analytics.liveplugins.kotlin.utils.testAnalytics
 import com.segment.analytics.substrata.kotlin.JSScope
 import io.mockk.every
-import io.mockk.mockk
 import io.mockk.spyk
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -25,11 +28,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
-@RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
+@RunWith(AndroidJUnit4::class)
 class JSAnalyticsTest {
 
     private lateinit var engine: JSScope
@@ -89,59 +89,48 @@ class JSAnalyticsTest {
             ),
             testScope, testDispatcher
         )
-        val mockAnalytics = spyk(analytics)
-        val mockConfiguration = mockk<Configuration>()
-        val mockTraits = mockk<Traits>(relaxed = true)
-
-        // Use mutable variables to track state changes
-        var currentUserId: String? = "test-user-id"
-        var currentAnonymousId: String = "test-anonymous-id"
-
-        // Setup basic properties with dynamic responses
-        every { mockAnalytics.anonymousId() } answers { currentAnonymousId }
-        every { mockAnalytics.userId() } answers { currentUserId }
-        every { mockAnalytics.traits() } returns mockTraits
-        every { mockAnalytics.configuration } returns mockConfiguration
-        every { mockConfiguration.application } returns null
+        val plugin = spyk(StubPlugin())
 
         // Capture method calls using global variables
-        every { mockAnalytics.track(any<String>(), any()) } answers {
-            val event = firstArg<String>()
-            val properties = secondArg<Any?>()
+        every { plugin.track(any()) } answers {
+            val arg = firstArg<TrackEvent>()
+            val event = arg.event
+            val properties = arg.properties
             capturedTrackCalls.add(event to properties)
+            arg
         }
         
-        every { mockAnalytics.identify(any<String>(), any()) } answers {
-            val userId = firstArg<String>()
-            val traits = secondArg<Any?>()
-            currentUserId = userId
+        every { plugin.identify(any()) } answers {
+            val arg = firstArg<IdentifyEvent>()
+            val userId = arg.userId
+            val traits = arg.traits
             capturedIdentifyCalls.add(userId to traits)
+            arg
         }
         
         
-        every { mockAnalytics.group(any<String>(), any()) } answers {
-            val groupId = firstArg<String>()
-            val traits = secondArg<Any?>()
+        every { plugin.group(any()) } answers {
+            val arg = firstArg<GroupEvent>()
+            val groupId = arg.groupId
+            val traits = arg.traits
             capturedGroupCalls.add(groupId to traits)
+            arg
         }
         
-        every { mockAnalytics.alias(any<String>(), any()) } answers {
-            val newId = firstArg<String>()
+        every { plugin.alias(any()) } answers {
+            val arg = firstArg<AliasEvent>()
+            val newId = arg.userId
             capturedAliasCalls.add(newId)
+            arg
         }
-        
-        every { mockAnalytics.flush() } answers {
+
+        every { plugin.flush() } answers {
             capturedFlushCalls++
         }
 
-        // Setup reset behavior
-        every { mockAnalytics.reset() } answers {
-            capturedResetCalls++
-            currentUserId = null
-            currentAnonymousId = "reset-anonymous-id"
-        }
+        analytics.add(plugin)
 
-        return mockAnalytics
+        return analytics
     }
 
     @Test
