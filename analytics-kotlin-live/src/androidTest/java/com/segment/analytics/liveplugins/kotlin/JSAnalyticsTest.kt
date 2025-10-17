@@ -12,8 +12,6 @@ import com.segment.analytics.kotlin.core.TrackEvent
 import com.segment.analytics.liveplugins.kotlin.utils.StubPlugin
 import com.segment.analytics.liveplugins.kotlin.utils.testAnalytics
 import com.segment.analytics.substrata.kotlin.JSScope
-import io.mockk.every
-import io.mockk.spyk
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.serialization.json.JsonElement
@@ -28,7 +26,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 class JSAnalyticsTest {
 
@@ -89,43 +89,32 @@ class JSAnalyticsTest {
             ),
             testScope, testDispatcher
         )
-        val plugin = spyk(StubPlugin())
-
-        // Capture method calls using global variables
-        every { plugin.track(any()) } answers {
-            val arg = firstArg<TrackEvent>()
-            val event = arg.event
-            val properties = arg.properties
-            capturedTrackCalls.add(event to properties)
-            arg
-        }
-        
-        every { plugin.identify(any()) } answers {
-            val arg = firstArg<IdentifyEvent>()
-            val userId = arg.userId
-            val traits = arg.traits
-            capturedIdentifyCalls.add(userId to traits)
-            arg
-        }
-        
-        
-        every { plugin.group(any()) } answers {
-            val arg = firstArg<GroupEvent>()
-            val groupId = arg.groupId
-            val traits = arg.traits
-            capturedGroupCalls.add(groupId to traits)
-            arg
-        }
-        
-        every { plugin.alias(any()) } answers {
-            val arg = firstArg<AliasEvent>()
-            val newId = arg.userId
-            capturedAliasCalls.add(newId)
-            arg
-        }
-
-        every { plugin.flush() } answers {
-            capturedFlushCalls++
+        // Create a custom capture plugin that doesn't require mocking
+        val plugin = object : StubPlugin() {
+            override fun track(payload: TrackEvent): TrackEvent {
+                capturedTrackCalls.add(payload.event to payload.properties)
+                return payload
+            }
+            
+            override fun identify(payload: IdentifyEvent): IdentifyEvent {
+                capturedIdentifyCalls.add(payload.userId to payload.traits)
+                return payload
+            }
+            
+            override fun group(payload: GroupEvent): GroupEvent {
+                capturedGroupCalls.add(payload.groupId to payload.traits)
+                return payload
+            }
+            
+            override fun alias(payload: AliasEvent): AliasEvent {
+                capturedAliasCalls.add(payload.userId)
+                return payload
+            }
+            
+            override fun flush() {
+                capturedFlushCalls++
+                super.flush()
+            }
         }
 
         analytics.add(plugin)
