@@ -1,5 +1,6 @@
 package com.segment.analytics.liveplugins.kotlin
 
+import android.content.SharedPreferences
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.Configuration
 import com.segment.analytics.kotlin.core.Traits
@@ -11,6 +12,15 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.segment.analytics.kotlin.android.AndroidStorageProvider
+import com.segment.analytics.kotlin.android.plugins.getUniqueID
+import com.segment.analytics.liveplugins.kotlin.utils.MemorySharedPreferences
+import com.segment.analytics.liveplugins.kotlin.utils.testAnalytics
+import io.mockk.mockkStatic
+import io.mockk.spyk
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -35,6 +45,8 @@ class JSAnalyticsTest {
     private val capturedAliasCalls = mutableListOf<String>()
     private var capturedFlushCalls = 0
     private var capturedResetCalls = 0
+    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testScope = TestScope(testDispatcher)
 
     @Before
     fun setUp() {
@@ -53,11 +65,12 @@ class JSAnalyticsTest {
             exceptionThrown = exception
         }
 
+        // Create a mock Analytics instance for testing using MockK
+        val mockAnalytics = createMockAnalytics()
+        jsAnalytics = JSAnalytics(mockAnalytics, engine)
+
         // Setup the engine similar to LivePlugins.configureEngine
         engine.sync {
-            // Create a mock Analytics instance for testing using MockK
-            val mockAnalytics = createMockAnalytics()
-            jsAnalytics = JSAnalytics(mockAnalytics, engine)
 
             // Export JSAnalytics to the engine
             export(jsAnalytics, "Analytics", "analytics")
@@ -69,7 +82,19 @@ class JSAnalyticsTest {
     }
 
     private fun createMockAnalytics(): Analytics {
-        val mockAnalytics = mockk<Analytics>(relaxed = true)
+        val appContext = spyk(InstrumentationRegistry.getInstrumentation().targetContext)
+        val sharedPreferences: SharedPreferences = MemorySharedPreferences()
+        every { appContext.getSharedPreferences(any(), any()) } returns sharedPreferences
+
+        val analytics  = testAnalytics(
+            Configuration(
+                writeKey = "123",
+                application = appContext,
+                storageProvider = AndroidStorageProvider
+            ),
+            testScope, testDispatcher
+        )
+        val mockAnalytics = spyk(analytics)
         val mockConfiguration = mockk<Configuration>()
         val mockTraits = mockk<Traits>(relaxed = true)
 
@@ -156,11 +181,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testJSAnalyticsProperties() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         val anonymousId = jsAnalytics.anonymousId
         val userId = jsAnalytics.userId
 
@@ -261,11 +281,6 @@ class JSAnalyticsTest {
 
     @Test
     fun testScreenWithPropertiesFromJavaScript() {
-        if (exceptionThrown != null) {
-            // Skip JS engine tests when native libraries are not available (unit tests)
-            return
-        }
-        
         engine.sync {
             evaluate("""
                 analytics.screen("Home Screen", "Navigation", {
