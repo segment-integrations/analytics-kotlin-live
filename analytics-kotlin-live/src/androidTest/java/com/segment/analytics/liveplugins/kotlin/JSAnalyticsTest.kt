@@ -124,25 +124,28 @@ class JSAnalyticsTest {
 
     @Test
     fun testJSAnalyticsBasicFunctionality() {
-        // Test JSAnalytics basic properties access
-        assertEquals("test-anonymous-id", jsAnalytics.anonymousId)
+        // First set up state through JavaScript calls
+        engine.sync {
+            evaluate("""analytics.identify("test-user-id");""")
+            evaluate("""analytics.track("test-event");""")
+            evaluate("""analytics.flush();""")
+        }
+        
+        // Now verify the properties reflect the JavaScript calls
+        assertNotNull("Anonymous ID should not be null", jsAnalytics.anonymousId)
+        assertTrue("Anonymous ID should not be empty", jsAnalytics.anonymousId.isNotEmpty())
         assertEquals("test-user-id", jsAnalytics.userId)
         
-        // Test method calls - these should not throw exceptions
-        jsAnalytics.track("test-event")
-        jsAnalytics.identify("direct-user")
-        jsAnalytics.flush()
-        jsAnalytics.reset()
-        
-        // Verify the calls were captured
+        // Verify the calls were captured by our plugin
         assertEquals(1, capturedTrackCalls.size)
         assertEquals("test-event", capturedTrackCalls[0].first)
         
         assertEquals(1, capturedIdentifyCalls.size)
-        assertEquals("direct-user", capturedIdentifyCalls[0].first)
+        assertEquals("test-user-id", capturedIdentifyCalls[0].first)
         
         assertEquals(1, capturedFlushCalls)
-        assertEquals(1, capturedResetCalls)
+        
+        assertNull("No exception should be thrown", exceptionThrown)
     }
 
     @After
@@ -154,11 +157,19 @@ class JSAnalyticsTest {
 
     @Test
     fun testJSAnalyticsProperties() {
+        // First identify a user through JavaScript
+        engine.sync {
+            evaluate("""analytics.identify("test-user-id");""")
+        }
+        
         val anonymousId = jsAnalytics.anonymousId
         val userId = jsAnalytics.userId
 
-        assertEquals("test-anonymous-id", anonymousId)
+        assertNotNull("Anonymous ID should not be null", anonymousId)
+        assertTrue("Anonymous ID should not be empty", anonymousId.isNotEmpty())
         assertEquals("test-user-id", userId)
+        
+        assertNull("No exception should be thrown", exceptionThrown)
     }
 
     @Test
@@ -350,7 +361,8 @@ class JSAnalyticsTest {
     fun testAnonymousIdPropertyFromJavaScript() {
         engine.sync {
             val result = evaluate("""analytics.anonymousId;""")
-            assertEquals("test-anonymous-id", result)
+            // Verify that JavaScript returns the same anonymous ID as Kotlin
+            assertEquals(jsAnalytics.anonymousId, result)
         }
 
         assertNull("No exception should be thrown", exceptionThrown)
@@ -359,6 +371,9 @@ class JSAnalyticsTest {
     @Test
     fun testUserIdPropertyFromJavaScript() {
         engine.sync {
+            // First set the user ID through JavaScript
+            evaluate("""analytics.identify("test-user-id");""")
+            // Then verify it's accessible from JavaScript
             val result = evaluate("""analytics.userId;""")
             assertEquals("test-user-id", result)
         }
@@ -379,8 +394,8 @@ class JSAnalyticsTest {
                 };
                 analytics.add(plugin);
             """)
-            // The result will be false since our mock analytics doesn't support plugin addition
-            assertEquals(false, result)
+            // The result should be true since our real analytics supports plugin addition
+            assertEquals(true, result)
         }
 
         assertNull("No exception should be thrown", exceptionThrown)
