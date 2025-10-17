@@ -1,26 +1,22 @@
 package com.segment.analytics.liveplugins.kotlin
 
-import android.content.SharedPreferences
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.segment.analytics.kotlin.android.AndroidStorageProvider
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.core.Configuration
 import com.segment.analytics.kotlin.core.Traits
+import com.segment.analytics.liveplugins.kotlin.utils.testAnalytics
 import com.segment.analytics.substrata.kotlin.JSScope
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import com.segment.analytics.kotlin.android.AndroidStorageProvider
-import com.segment.analytics.kotlin.android.plugins.getUniqueID
-import com.segment.analytics.liveplugins.kotlin.utils.MemorySharedPreferences
-import com.segment.analytics.liveplugins.kotlin.utils.testAnalytics
-import io.mockk.mockkStatic
-import io.mockk.spyk
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -29,8 +25,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
-@RunWith(AndroidJUnit4::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
 class JSAnalyticsTest {
 
     private lateinit var engine: JSScope
@@ -82,14 +81,10 @@ class JSAnalyticsTest {
     }
 
     private fun createMockAnalytics(): Analytics {
-        val appContext = spyk(InstrumentationRegistry.getInstrumentation().targetContext)
-        val sharedPreferences: SharedPreferences = MemorySharedPreferences()
-        every { appContext.getSharedPreferences(any(), any()) } returns sharedPreferences
-
         val analytics  = testAnalytics(
             Configuration(
                 writeKey = "123",
-                application = appContext,
+                application = InstrumentationRegistry.getInstrumentation().targetContext,
                 storageProvider = AndroidStorageProvider
             ),
             testScope, testDispatcher
