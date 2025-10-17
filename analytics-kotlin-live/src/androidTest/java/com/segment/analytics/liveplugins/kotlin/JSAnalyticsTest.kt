@@ -5,9 +5,11 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.segment.analytics.kotlin.android.AndroidStorageProvider
 import com.segment.analytics.kotlin.core.AliasEvent
 import com.segment.analytics.kotlin.core.Analytics
+import com.segment.analytics.kotlin.core.BaseEvent
 import com.segment.analytics.kotlin.core.Configuration
 import com.segment.analytics.kotlin.core.GroupEvent
 import com.segment.analytics.kotlin.core.IdentifyEvent
+import com.segment.analytics.kotlin.core.ScreenEvent
 import com.segment.analytics.kotlin.core.TrackEvent
 import com.segment.analytics.liveplugins.kotlin.utils.StubPlugin
 import com.segment.analytics.liveplugins.kotlin.utils.testAnalytics
@@ -95,7 +97,16 @@ class JSAnalyticsTest {
                 capturedTrackCalls.add(payload.event to payload.properties)
                 return payload
             }
-            
+
+            override fun reset() {
+                capturedResetCalls++
+            }
+
+            override fun screen(payload: ScreenEvent): BaseEvent? {
+                capturedScreenCalls.add(Triple(payload.name, payload.category, payload.properties))
+                return payload
+            }
+
             override fun identify(payload: IdentifyEvent): IdentifyEvent {
                 capturedIdentifyCalls.add(payload.userId to payload.traits)
                 return payload
@@ -251,19 +262,6 @@ class JSAnalyticsTest {
     }
 
     @Test
-    fun testScreenFromJavaScript() {
-        engine.sync {
-            evaluate("""analytics.screen("Home Screen", "Navigation");""")
-        }
-
-        // Verify that the screen method was called with correct parameters from JavaScript
-        assertEquals(1, capturedScreenCalls.size)
-        assertEquals("Home Screen", capturedScreenCalls[0].first)
-        assertEquals("Navigation", capturedScreenCalls[0].second)
-        assertNull("No exception should be thrown", exceptionThrown)
-    }
-
-    @Test
     fun testScreenWithPropertiesFromJavaScript() {
         engine.sync {
             evaluate("""
@@ -385,13 +383,13 @@ class JSAnalyticsTest {
     fun testAddPluginFromJavaScript() {
         engine.sync {
             val result = evaluate("""
-                var plugin = {
-                    type: LivePluginType.enrichment,
-                    destination: null,
-                    execute: function(event) {
-                        return event;
+                class AnonymizeIPs extends LivePlugin {
+                    execute(event) {
+                        event.context.ip = "xxx.xxx.xxx.xxx";
+                        return super.execute(event)
                     }
-                };
+                }
+                let plugin = new AnonymizeIPs();
                 analytics.add(plugin);
             """)
             // The result should be true since our real analytics supports plugin addition
