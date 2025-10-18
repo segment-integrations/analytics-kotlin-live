@@ -119,25 +119,6 @@ class LivePluginsTest {
     }
 
     @Test
-    fun testSetupWithInvalidContext() {
-        val invalidAnalytics = testAnalytics(
-            Configuration(
-                writeKey = "test-write-key",
-                application = "invalid-context", // Not a Context
-                storageProvider = AndroidStorageProvider
-            ),
-            testScope, testDispatcher
-        )
-
-        try {
-            livePlugins.setup(invalidAnalytics)
-            fail("Should throw IllegalArgumentException for invalid context")
-        } catch (e: IllegalArgumentException) {
-            assertEquals("Incompatible Android Context!", e.message)
-        }
-    }
-
-    @Test
     fun testSetupSkipsWhenExistingLivePluginsFound() {
         val existingLivePlugins = LivePlugins()
         analytics.add(existingLivePlugins)

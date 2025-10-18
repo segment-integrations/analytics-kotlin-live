@@ -93,10 +93,12 @@ class LivePlugins(
 
     override fun update(settings: Settings, type: Plugin.UpdateType) {
         // if we find an existing LivePlugins instance that is not ourselves...
-        if (analytics.find(LivePlugins::class) != this) {
-            // remove ourselves.  we can't do this in configure.
-            analytics.remove(this)
-            return
+        analytics.find(LivePlugins::class)?.let {
+            if (it != this@LivePlugins) {
+                // remove ourselves.  we can't do this in configure.
+                analytics.remove(this@LivePlugins)
+                return
+            }
         }
 
         if (loaded) {
