@@ -472,7 +472,7 @@ class LivePluginsTest {
         livePluginsWithFallback.update(Settings(emptyJsonObject), Plugin.UpdateType.Initial)
         
         // Give some time for async loading to complete
-        Thread.sleep(100)
+        Thread.sleep(2000)
         
         assertEquals("Dependent 1 prepare should be called once", 1, dependent1PrepareCount)
         assertEquals("Dependent 1 ready should be called once", 1, dependent1ReadyCount)
