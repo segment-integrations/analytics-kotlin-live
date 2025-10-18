@@ -421,7 +421,32 @@ class LivePluginsTest {
 
     @Test
     fun testMultipleDependents() {
-        livePlugins.setup(analytics)
+        // Create a valid JavaScript content that will load successfully
+        val fallbackContent = """
+            // Valid JavaScript that creates a simple plugin
+            class TestPlugin extends LivePlugin {
+                constructor() {
+                    super(LivePluginType.enrichment, null);
+                }
+                
+                track(event) {
+                    console.log('TestPlugin track called');
+                    return event;
+                }
+            }
+            
+            // Register the plugin
+            analytics.add(new TestPlugin());
+        """.trimIndent()
+        
+        val fallbackStream = ByteArrayInputStream(fallbackContent.toByteArray())
+        
+        val livePluginsWithFallback = LivePlugins(
+            fallbackFile = fallbackStream,
+            forceFallbackFile = true
+        )
+        
+        livePluginsWithFallback.setup(analytics)
         
         var dependent1PrepareCount = 0
         var dependent1ReadyCount = 0
@@ -438,17 +463,28 @@ class LivePluginsTest {
             override fun readyToStart() { dependent2ReadyCount++ }
         }
         
-        livePlugins.addDependent(dependent1)
-        livePlugins.addDependent(dependent2)
+        livePluginsWithFallback.addDependent(dependent1)
+        livePluginsWithFallback.addDependent(dependent2)
         
-        assertEquals("Should have 2 dependents", 2, livePlugins.dependents.size)
+        assertEquals("Should have 2 dependents", 2, livePluginsWithFallback.dependents.size)
         
-        // Update to trigger loading
-        livePlugins.update(Settings(emptyJsonObject), Plugin.UpdateType.Initial)
+        // Update to trigger loading - this should complete successfully and call readyToStart
+        livePluginsWithFallback.update(Settings(emptyJsonObject), Plugin.UpdateType.Initial)
+        
+        // Give some time for async loading to complete
+        Thread.sleep(100)
         
         assertEquals("Dependent 1 prepare should be called once", 1, dependent1PrepareCount)
         assertEquals("Dependent 1 ready should be called once", 1, dependent1ReadyCount)
         assertEquals("Dependent 2 prepare should be called once", 1, dependent2PrepareCount)
         assertEquals("Dependent 2 ready should be called once", 1, dependent2ReadyCount)
+        
+        livePluginsWithFallback.release()
+        
+        // Clean up the created file
+        val context = analytics.configuration.application as Context
+        val storageDirectory = context.getDir("segment-data", Context.MODE_PRIVATE)
+        val livePluginFile = File(storageDirectory, LivePlugins.LIVE_PLUGINS_FILE_NAME)
+        livePluginFile.delete()
     }
 }
