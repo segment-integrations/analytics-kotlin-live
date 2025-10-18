@@ -57,7 +57,7 @@ class LivePlugins(
 
     private lateinit var livePluginFile: File
 
-    private val dependents = CopyOnWriteArrayList<LivePluginsDependent>()
+    internal val dependents = CopyOnWriteArrayList<LivePluginsDependent>()
 
     // Call this function when app is destroyed, to prevent memory leaks
     fun release() {
