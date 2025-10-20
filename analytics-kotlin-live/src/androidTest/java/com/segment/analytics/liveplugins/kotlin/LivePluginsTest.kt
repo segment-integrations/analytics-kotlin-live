@@ -73,8 +73,12 @@ class LivePluginsTest {
 
     @After
     fun tearDown() {
-        if (exceptionThrown == null && ::livePlugins.isInitialized) {
-            livePlugins.release()
+        if (::livePlugins.isInitialized) {
+            try {
+                livePlugins.release()
+            } catch (_: Exception) {
+                // Ignore exceptions during tearDown release - the test might have already released it
+            }
         }
         LivePlugins.loaded = false
     }
