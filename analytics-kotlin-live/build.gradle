@@ -41,9 +41,24 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.13.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
-    testImplementation 'junit:junit:4.13.2'
+    // TESTING
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+    androidTestImplementation 'io.mockk:mockk-android:1.12.2'
+    androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.1'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+
+    // Add JUnit5 dependencies.
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.8.2'
+
+    // Add JUnit4 legacy dependencies.
+    testImplementation 'junit:junit:4.13.2'
+    testRuntimeOnly 'org.junit.vintage:junit-vintage-engine:5.8.2'
+
+    // Roboelectric dependencies for JVM unit tests only
+    testImplementation 'org.robolectric:robolectric:4.16'
+    testImplementation 'androidx.test:core:1.5.0'
 }
 task sourcesJar(type: Jar) {
     archiveClassifier.set('sources')
