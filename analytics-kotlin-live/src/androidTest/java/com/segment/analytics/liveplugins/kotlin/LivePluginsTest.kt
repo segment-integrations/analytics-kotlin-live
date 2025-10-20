@@ -62,6 +62,13 @@ class LivePluginsTest {
         
         // Clear the loaded state for each test
         LivePlugins.loaded = false
+        
+        // Clear SharedPreferences cache to ensure clean state for each test
+        val sharedPrefs = context.getSharedPreferences(
+            "analytics-liveplugins-test-write-key",
+            Context.MODE_PRIVATE
+        )
+        sharedPrefs.edit().clear().apply()
     }
 
     @After
