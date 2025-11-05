@@ -65,7 +65,7 @@ class JSStorage {
         }
     }
 
-    private fun save(key: String, value: Any, type: String) {
+    private inline fun <reified T> save(key: String, value: T, type: String) {
         val jsonObject = buildJsonObject {
             put(PROP_TYPE, type)
             put(PROP_VALUE, Json.encodeToString(value))
