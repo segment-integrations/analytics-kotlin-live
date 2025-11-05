@@ -9,7 +9,9 @@ import com.segment.analytics.substrata.kotlin.JSObject
 import com.segment.analytics.substrata.kotlin.JSScope
 import com.segment.analytics.substrata.kotlin.JsonElementConverter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -175,29 +177,37 @@ class JSStorageTest {
     @Test
     fun testJSStorageWithJSArray() {
         // set from js
-        var value = engine.await {
+        var value = engine.await(true) {
             evaluate("""storage.setValue("array", [1, "test", true])""")
             evaluate("""storage.getValue("array")""")
         }
         assertNull(exceptionThrown)
-        val jsArrayValue = value as JSArray
-        assertEquals(3, jsArrayValue.size)
-        assertEquals(1, jsArrayValue.getInt(0))
-        assertEquals("test", jsArrayValue.getString(1))
-        assertEquals(true, jsArrayValue.getBoolean(2))
+        val jsonArray = JsonElementConverter.read(value).jsonArray
+        assertEquals(3, jsonArray.size)
+        assertEquals(1, jsonArray[0].jsonPrimitive.content.toInt())
+        assertEquals("test", jsonArray[1].jsonPrimitive.content)
+        assertEquals(true, jsonArray[2].jsonPrimitive.content.toBoolean())
 
         // set from native
-        val nativeArray = engine.await {
-            evaluate("""[42, "native", false]""")
-        } as JSArray
-        jsStorage.setValue("array", nativeArray)
-        value = engine.await {
-            evaluate("""storage.getValue("array")""")
+        val nativeArray = engine.await(true) {
+            evaluate("""
+                let arr = [42, "native", false]
+                arr
+                """.trimIndent())
         }
-        val retrievedArray = value as JSArray
+        jsStorage.setValue("array", nativeArray as JSArray)
+        value = engine.await {
+            evaluate("""
+                let arr2 = storage.getValue("array")
+                arr.length == arr2.length && arr[0] == arr2[0] && arr[1] == arr2[1] && arr[2] == arr2[2]
+                """.trimIndent())
+        }
+        assertEquals(true, value)
+        val jsValue = jsStorage.getValue("array")
+        val retrievedArray = JsonElementConverter.read(jsValue).jsonArray
         assertEquals(3, retrievedArray.size)
-        assertEquals(42, retrievedArray.getInt(0))
-        assertEquals("native", retrievedArray.getString(1))
-        assertEquals(false, retrievedArray.getBoolean(2))
+        assertEquals(42, retrievedArray[0].jsonPrimitive.content.toInt())
+        assertEquals("native", retrievedArray[1].jsonPrimitive.content)
+        assertEquals(false, retrievedArray[2].jsonPrimitive.content.toBoolean())
     }
 }
