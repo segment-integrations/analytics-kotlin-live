@@ -210,4 +210,53 @@ class JSStorageTest {
         assertEquals("native", retrievedArray[1].jsonPrimitive.content)
         assertEquals(false, retrievedArray[2].jsonPrimitive.content.toBoolean())
     }
+
+    @Test
+    fun testJSStorageRemoveValue() {
+        // 1. set from js and remove from js
+        engine.sync {
+            evaluate("""storage.setValue("jsJs", "value1")""")
+            evaluate("""storage.removeValue("jsJs")""")
+        }
+        assertNull(exceptionThrown)
+        assertNull(jsStorage.getValue("jsJs"))
+        val jsJsValue = engine.await(true) {
+            evaluate("""storage.getValue("jsJs")""")
+        }
+        assertNull(jsJsValue)
+
+        // 2. set from native and remove from native
+        jsStorage.setValue("nativeNative", "value2")
+        assertEquals("value2", jsStorage.getValue("nativeNative"))
+        jsStorage.removeValue("nativeNative")
+        assertNull(jsStorage.getValue("nativeNative"))
+        val nativeNativeValue = engine.await {
+            evaluate("""storage.getValue("nativeNative")""")
+        }
+        assertNull(nativeNativeValue)
+
+        // 3. set from js and remove from native
+        engine.sync {
+            evaluate("""storage.setValue("jsNative", "value3")""")
+        }
+        assertEquals("value3", jsStorage.getValue("jsNative"))
+        jsStorage.removeValue("jsNative")
+        assertNull(jsStorage.getValue("jsNative"))
+        val jsNativeValue = engine.await(true) {
+            evaluate("""storage.getValue("jsNative")""")
+        }
+        assertNull(jsNativeValue)
+
+        // 4. set from native and remove from js
+        jsStorage.setValue("nativeJs", "value4")
+        assertEquals("value4", jsStorage.getValue("nativeJs"))
+        engine.sync {
+            evaluate("""storage.removeValue("nativeJs")""")
+        }
+        assertNull(jsStorage.getValue("nativeJs"))
+        val nativeJsValue = engine.await(true) {
+            evaluate("""storage.getValue("nativeJs")""")
+        }
+        assertNull(nativeJsValue)
+    }
 }
