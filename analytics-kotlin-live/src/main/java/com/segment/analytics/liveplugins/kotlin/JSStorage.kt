@@ -79,7 +79,7 @@ class JSStorage {
             TYPE_BOOLEAN -> this.getBoolean(PROP_VALUE)
             TYPE_INT -> this.getInt(PROP_VALUE)
             TYPE_DOUBLE -> this.getDouble(PROP_VALUE)
-            TYPE_STRING -> this.getString(PROP_VALUE)
+            TYPE_STRING -> this.getString(PROP_VALUE)?.let { Json.decodeFromString<String>(it) }
             TYPE_LONG -> this.getLong(PROP_VALUE)
             else -> {
                 this[PROP_VALUE]?.let {
