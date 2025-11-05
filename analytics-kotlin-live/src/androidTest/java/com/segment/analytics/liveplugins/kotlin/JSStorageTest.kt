@@ -1,11 +1,15 @@
 package com.segment.analytics.liveplugins.kotlin
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.segment.analytics.kotlin.core.utilities.getInt
+import com.segment.analytics.kotlin.core.utilities.getString
 import com.segment.analytics.liveplugins.kotlin.utils.MemorySharedPreferences
 import com.segment.analytics.substrata.kotlin.JSArray
 import com.segment.analytics.substrata.kotlin.JSObject
 import com.segment.analytics.substrata.kotlin.JSScope
+import com.segment.analytics.substrata.kotlin.JsonElementConverter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -138,24 +142,32 @@ class JSStorageTest {
     @Test
     fun testJSStorageWithJSObject() {
         // set from js
-        var value = engine.await {
+        var value = engine.await(true) {
             evaluate("""storage.setValue("object", {name: "test", value: 42})""")
             evaluate("""storage.getValue("object")""")
         }
         assertNull(exceptionThrown)
-        val jsObjectValue = value as JSObject
-        assertEquals("test", jsObjectValue.getString("name"))
-        assertEquals(42, jsObjectValue.getInt("value"))
+        val jsonObject = JsonElementConverter.read(value).jsonObject
+        assertEquals("test", jsonObject.getString("name"))
+        assertEquals(42, jsonObject.getInt("value"))
 
         // set from native
-        val nativeObject = engine.await {
-            evaluate("""{name: "native", value: 100}""")
-        } as JSObject
-        jsStorage.setValue("object", nativeObject)
-        value = engine.await {
-            evaluate("""storage.getValue("object")""")
+        val nativeObject = engine.await(true) {
+            evaluate("""
+                let obj = {name: "native", value: 100}
+                obj
+                """.trimIndent())
         }
-        val retrievedObject = value as JSObject
+        jsStorage.setValue("object", nativeObject as JSObject)
+        value = engine.await {
+            evaluate("""
+                let obj2 = storage.getValue("object")
+                obj.name == obj2.name && obj.value == obj2.value
+                """.trimIndent())
+        }
+        assertEquals(true, value)
+        val jsValue = jsStorage.getValue("object")
+        val retrievedObject = JsonElementConverter.read(jsValue).jsonObject
         assertEquals("native", retrievedObject.getString("name"))
         assertEquals(100, retrievedObject.getInt("value"))
     }
