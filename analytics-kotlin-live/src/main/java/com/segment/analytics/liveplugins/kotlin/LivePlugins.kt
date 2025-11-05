@@ -123,6 +123,8 @@ class LivePlugins(
     private fun configureEngine() = engine.sync {
         val jsAnalytics = JSAnalytics(analytics, engine)
         export(jsAnalytics, "Analytics","analytics")
+        val jsStorage = JSStorage(sharedPreferences, engine)
+        export(jsStorage, "Storage", "storage")
 
         evaluate(EmbeddedJS.ENUM_SETUP_SCRIPT)
         evaluate(EmbeddedJS.LIVE_PLUGINS_BASE_SETUP_SCRIPT)
