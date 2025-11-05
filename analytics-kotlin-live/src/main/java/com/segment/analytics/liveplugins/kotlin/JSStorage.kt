@@ -13,6 +13,7 @@ import com.segment.analytics.substrata.kotlin.JSScope
 import com.segment.analytics.substrata.kotlin.JsonElementConverter
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -52,11 +53,19 @@ class JSStorage {
     }
 
     fun setValue(key: String, value: JSObject) {
-        save(key, value, TYPE_OBJECT)
+        save(
+            key,
+            JsonElementConverter.read(value),
+            TYPE_OBJECT
+        )
     }
 
     fun setValue(key: String, value: JSArray) {
-        save(key, value, TYPE_ARRAY)
+        save(
+            key,
+            JsonElementConverter.read(value),
+            TYPE_ARRAY
+        )
     }
 
     fun getValue(key: String): Any? {
@@ -82,9 +91,10 @@ class JSStorage {
             TYPE_STRING -> this.getString(PROP_VALUE)?.let { Json.decodeFromString<String>(it) }
             TYPE_LONG -> this.getLong(PROP_VALUE)?.toDouble()
             else -> {
-                this[PROP_VALUE]?.let {
-                    engine?.await {
-                        JsonElementConverter.write(it, context)
+                this.getString(PROP_VALUE)?.let {
+                    val json = Json.decodeFromString<JsonElement>(it)
+                    engine?.await(true) {
+                        JsonElementConverter.write(json, context)
                     }
                 }
             }
