@@ -74,6 +74,10 @@ class JSStorage {
         }
     }
 
+    fun removeValue(key: String) {
+        this.sharedPreferences?.edit(commit = true) { remove(key) }
+    }
+
     private inline fun <reified T> save(key: String, value: T, type: String) {
         val jsonObject = buildJsonObject {
             put(PROP_TYPE, type)
