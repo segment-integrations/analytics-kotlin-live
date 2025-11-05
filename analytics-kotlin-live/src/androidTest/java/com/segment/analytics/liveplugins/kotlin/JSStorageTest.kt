@@ -123,16 +123,16 @@ class JSStorageTest {
             evaluate("""storage.getValue("long")""")
         }
         assertNull(exceptionThrown)
-        assertEquals(1234567890123L, value)
-        assertEquals(1234567890123L, jsStorage.getValue("long"))
+        assertEquals(1234567890123L.toDouble(), value)
+        assertEquals(1234567890123L.toDouble(), jsStorage.getValue("long"))
 
         // set from native
         jsStorage.setValue("long", 9876543210987L)
         value = engine.await {
             evaluate("""storage.getValue("long")""")
         }
-        assertEquals(9876543210987L, value)
-        assertEquals(9876543210987L, jsStorage.getValue("long"))
+        assertEquals(9876543210987L.toDouble(), value)
+        assertEquals(9876543210987L.toDouble(), jsStorage.getValue("long"))
     }
 
     @Test

@@ -80,7 +80,7 @@ class JSStorage {
             TYPE_INT -> this.getInt(PROP_VALUE)
             TYPE_DOUBLE -> this.getDouble(PROP_VALUE)
             TYPE_STRING -> this.getString(PROP_VALUE)?.let { Json.decodeFromString<String>(it) }
-            TYPE_LONG -> this.getLong(PROP_VALUE)
+            TYPE_LONG -> this.getLong(PROP_VALUE)?.toDouble()
             else -> {
                 this[PROP_VALUE]?.let {
                     engine?.await {
