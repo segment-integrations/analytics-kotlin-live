@@ -65,7 +65,7 @@ class LivePlugins(
     }
 
     override fun setup(analytics: Analytics) {
-        super<WaitingPlugin>.setup(analytics)
+        this.analytics = analytics
 
         LivePluginsHolder.plugin = WeakReference(this)
 
@@ -90,8 +90,6 @@ class LivePlugins(
         if (!livePluginFile.exists()) {
             livePluginFile.createNewFile()
         }
-
-        configureEngine()
     }
 
     override fun update(settings: Settings, type: Plugin.UpdateType) {
