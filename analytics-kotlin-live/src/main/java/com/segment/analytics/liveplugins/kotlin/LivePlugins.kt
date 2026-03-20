@@ -65,7 +65,7 @@ class LivePlugins(
     }
 
     override fun setup(analytics: Analytics) {
-        super<WaitingPlugin>.setup(analytics)
+        this.analytics = analytics
 
         LivePluginsHolder.plugin = WeakReference(this)
 
@@ -87,11 +87,18 @@ class LivePlugins(
         )
         val storageDirectory = context.getDir("segment-data", Context.MODE_PRIVATE)
         livePluginFile = File(storageDirectory, LIVE_PLUGINS_FILE_NAME)
-
-        configureEngine()
+        if (!livePluginFile.exists()) {
+            livePluginFile.createNewFile()
+        }
     }
 
     override fun update(settings: Settings, type: Plugin.UpdateType) {
+        if (loaded) {
+            return
+        }
+
+        loaded = true
+
         // if we find an existing LivePlugins instance that is not ourselves...
         analytics.find(LivePlugins::class)?.let {
             if (it != this@LivePlugins) {
@@ -101,14 +108,19 @@ class LivePlugins(
             }
         }
 
-        if (loaded) {
-            return
+        pause()
+        configureEngine()
+
+        updateLivePlugin(settings) { success ->
+            if (success) {
+                loadLivePlugin(livePluginFile) {
+                    resume()
+                }
+            }
+            else {
+                resume()
+            }
         }
-
-        loaded = true
-
-        updateLivePlugin(settings)
-        loadLivePlugin(livePluginFile)
     }
 
     fun addDependent(plugin: LivePluginsDependent) {
@@ -130,7 +142,7 @@ class LivePlugins(
         evaluate(EmbeddedJS.LIVE_PLUGINS_BASE_SETUP_SCRIPT)
     }
 
-    private fun loadLivePlugin(file: File) {
+    private fun loadLivePlugin(file: File, onCompleted: (Boolean) -> Unit) {
         if (fallbackFile != null && (forceFallbackFile || !file.exists())) {
             // Forced to use fallback file
             fallbackFile.copyTo(FileOutputStream(file))
@@ -144,29 +156,42 @@ class LivePlugins(
                 loadBundle(js)
             }
 
-            loadBundle(file.inputStream()) { error ->
-                if (error != null) {
-                    analytics.log(error.message ?: "")
-                } else {
-                    for (d in dependents) {
-                        d.readyToStart()
+            try {
+                loadBundle(file.inputStream()) { error ->
+                    if (error != null) {
+                        analytics.log(error.message ?: "")
+                        onCompleted(false)
+                    } else {
+                        for (d in dependents) {
+                            d.readyToStart()
+                        }
+
+                        onCompleted(true)
                     }
                 }
-
-                resume()
+            }
+            catch (e: Exception) {
+                analytics.log(e.message ?: "")
+                onCompleted(false)
             }
         }
     }
 
-    private fun updateLivePlugin(settings: Settings) {
+    private fun updateLivePlugin(settings: Settings, onCompleted: (Boolean) -> Unit) {
         if (settings.edgeFunction != emptyJsonObject) {
             LenientJson.decodeFromJsonElement<LivePluginsSettings>(
                 settings.edgeFunction
             ).also {
                 if (shouldUpdateLivePlugin(it)) {
-                    performLivePluginUpdate(it)
+                    performLivePluginUpdate(it, onCompleted)
+                }
+                else {
+                    onCompleted(true)
                 }
             }
+        }
+        else {
+            onCompleted(true)
         }
     }
 
@@ -185,7 +210,7 @@ class LivePlugins(
         return true
     }
 
-    private fun performLivePluginUpdate(data: LivePluginsSettings) {
+    private fun performLivePluginUpdate(data: LivePluginsSettings, onCompleted: (success: Boolean) -> Unit) {
         val urlString = data.downloadURL
 
         sharedPreferences.edit { putString(SHARED_PREFS_KEY, Json.encodeToString(data)) }
@@ -194,9 +219,11 @@ class LivePlugins(
             analyticsScope.launch(fileIODispatcher as CoroutineContext) {
                 if (urlString.isNotEmpty()) {
                     download(urlString, livePluginFile)
-                    log("New LivePlugins installed.  Will be used on next app launch.")
+                    log("New LivePlugins installed.")
+                    onCompleted(true)
                 } else {
                     disableBundleURL(livePluginFile)
+                    onCompleted(false)
                 }
             }
         }
