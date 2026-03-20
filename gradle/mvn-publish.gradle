@@ -80,6 +80,16 @@ signing {
     sign publishing.publications
 }
 
+// Fix for Gradle 8.x: Ensure signing tasks depend on AAR creation
+afterEvaluate {
+    tasks.withType(Sign).configureEach {
+        def bundleTask = tasks.findByName("bundleReleaseAar")
+        if (bundleTask != null) {
+            dependsOn bundleTask
+        }
+    }
+}
+
 publish.dependsOn build
 publishToMavenLocal.dependsOn build
 publishToSonatype.dependsOn publish
