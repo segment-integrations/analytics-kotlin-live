@@ -87,6 +87,9 @@ class LivePlugins(
         )
         val storageDirectory = context.getDir("segment-data", Context.MODE_PRIVATE)
         livePluginFile = File(storageDirectory, LIVE_PLUGINS_FILE_NAME)
+        if (!livePluginFile.exists()) {
+            livePluginFile.createNewFile()
+        }
 
         configureEngine()
     }
