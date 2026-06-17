@@ -8,3 +8,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Sensitive key material
+tmp/
+*.pgp
+*.asc
+*.key
+*.gpg
